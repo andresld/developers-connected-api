@@ -28,7 +28,7 @@ object service {
 
         end      <- Sync[F].realTime
         latency   = (end - start).toMillis.asLatency
-        _        <- Logger[F].info(outgoingResponse |+| latency |+| response)
+        _        <- Logger[F].info(outgoingResponse |+| response |+| latency)
       } yield response
 
     )
