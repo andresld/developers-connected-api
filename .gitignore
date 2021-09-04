@@ -1,2 +1,17 @@
+# Scala related
 *.class
 *.log
+project/project
+project/.bloop
+target/
+
+# Visual Studio Code
+.vscode
+
+# IDEA
+.idea
+
+# Metals
+.metals
+.bloop
+.bsp
