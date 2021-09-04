@@ -1,9 +1,11 @@
 package com.github.aldtid.developers.connected
 
 import com.github.aldtid.developers.connected.logging.json.jsonProgramLog
+import com.github.aldtid.developers.connected.model.encoder.json.jsonResponseEncoder
 
 import cats.effect.{ExitCode, IO, IOApp}
 import io.circe.Json
+import org.http4s.circe.jsonEncoder
 import org.http4s.dsl.io
 import org.http4s.dsl.Http4sDsl
 import org.typelevel.log4cats.Logger
@@ -21,6 +23,6 @@ object Main extends IOApp {
     } yield code
 
   def run(implicit dsl: Http4sDsl[IO], logger: Logger[IO]): IO[ExitCode] =
-    launcher.start[IO, Json](global)
+    launcher.start[IO, Json, Json](global)
 
 }
