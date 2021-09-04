@@ -9,6 +9,9 @@ import io.circe.syntax._
 import org.http4s.{Header, Request, Response}
 
 
+/**
+ * Json representation for program logs.
+ */
 object json {
 
   // ----- BASE LOG INSTANCE -----
