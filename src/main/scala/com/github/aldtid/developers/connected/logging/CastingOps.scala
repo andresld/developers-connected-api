@@ -19,6 +19,6 @@ trait CastingOps {
    * @tparam L type to format the logs
    * @return the resulting combination of a Log and passed A instance
    */
-  implicit def loggableAsLog[A, L](a: A)(implicit log: Log[L], loggable: Loggable[A, L]): Log[L] = log |+| a
+  implicit def asLog[A, L](a: A)(implicit log: Log[L], loggable: Loggable[A, L]): Log[L] = log |+| a
 
 }

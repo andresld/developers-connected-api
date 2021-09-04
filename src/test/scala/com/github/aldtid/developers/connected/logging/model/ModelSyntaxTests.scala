@@ -4,9 +4,9 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 
-class ModelExtensionsTests extends AnyFlatSpec with Matchers {
+class ModelSyntaxTests extends AnyFlatSpec with Matchers {
 
-  object ext extends ModelExtensions
+  object ext extends ModelSyntax
 
   "stringExtensions" should "correctly pimp a string value with logging conversion functions" in {
 
