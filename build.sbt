@@ -3,14 +3,19 @@ import sbt.ModuleID
 val compilerOptions: Seq[String] =
   Seq(
     "-language:higherKinds",
+    "-language:implicitConversions",
     "-feature",
     "-unchecked"
   )
 
 val libDependencies: Seq[ModuleID] =
   Seq(
+    dependencies.circe.generic,
+    dependencies.http4s.circe,
     dependencies.http4s.dsl,
     dependencies.http4s.server,
+    dependencies.log.binding,
+    dependencies.log.slf4j,
     dependencies.test.core
   )
 
