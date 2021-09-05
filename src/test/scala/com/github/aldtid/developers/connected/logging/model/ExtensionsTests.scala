@@ -8,7 +8,7 @@ class ExtensionsTests extends AnyFlatSpec with Matchers {
 
   "StringExtensions" should "provide the expected values for the conversion functions" in {
 
-    val ext: extensions.StringExtensions = new extensions.StringExtensions("test")
+    val ext: syntax.StringSyntax = new syntax.StringSyntax("test")
 
     ext.asMessage shouldBe Message("test")
 
@@ -16,7 +16,7 @@ class ExtensionsTests extends AnyFlatSpec with Matchers {
 
   "LongExtensions" should "provide the expected values for the conversion functions" in {
 
-    val ext: extensions.LongExtensions = new extensions.LongExtensions(1)
+    val ext: syntax.LongSyntax = new syntax.LongSyntax(1)
 
     ext.asLatency shouldBe Latency(1)
 
