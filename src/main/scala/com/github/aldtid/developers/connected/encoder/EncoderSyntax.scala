@@ -2,7 +2,7 @@ package com.github.aldtid.developers.connected.encoder
 
 
 /**
- * Enhances the functionality of a generic type instace adding Encoder functions for that type.
+ * Enhances the functionality of a generic type instance adding Encoder functions for that type.
  *
  * @param a instance to enhance
  * @tparam A generic type

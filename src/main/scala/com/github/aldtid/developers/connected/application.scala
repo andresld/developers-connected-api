@@ -1,6 +1,6 @@
 package com.github.aldtid.developers.connected
 
-import com.github.aldtid.developers.connected.controller.DevelopersController
+import com.github.aldtid.developers.connected.handler.DevelopersHandler
 import com.github.aldtid.developers.connected.encoder.BodyEncoder
 import com.github.aldtid.developers.connected.encoder.implicits._
 import com.github.aldtid.developers.connected.logging.ProgramLog
@@ -29,9 +29,9 @@ object application {
    * @tparam F context
    * @tparam L logging type to format
    * @tparam O body type to encode
-   * @return
+   * @return an application that handles every API route
    */
-  def app[F[_] : Sync : Logger : Http4sDsl, L, O : BodyEncoder](controller: DevelopersController[F])
+  def app[F[_] : Sync : Logger : Http4sDsl, L, O : BodyEncoder](controller: DevelopersHandler[F])
                                                                (implicit pl: ProgramLog[L]): HttpApp[F] = {
 
     import pl._
@@ -61,7 +61,7 @@ object application {
   /**
    * Defines the routes for 'developers' endpoints group.
    *
-   * All the endpoints defined are managed by passed [[DevelopersController]] instance. As a partial function, no other
+   * All the endpoints defined are managed by passed [[DevelopersHandler]] instance. As a partial function, no other
    * that 'developers' endpoints will be managed by this function.
    *
    * @param controller controller functions for each endpoint
@@ -72,7 +72,7 @@ object application {
    * @tparam O body type to encode
    * @return a partial function that handles each of 'developers' endpoints
    */
-  def developers[F[_] : Monad, L : ProgramLog, O](controller: DevelopersController[F])
+  def developers[F[_] : Monad, L : ProgramLog, O](controller: DevelopersHandler[F])
                                                  (implicit dsl: Http4sDsl[F],
                                                   be: BodyEncoder[O]): PartialFunction[Request[F], F[Response[F]]] = {
 

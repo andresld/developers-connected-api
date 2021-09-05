@@ -11,11 +11,15 @@ object model {
       val connection: Boolean
     }
 
-    final case object Connected extends Connection {
+    final case class Connected(organizations: NonEmptyList[String]) extends Connection {
       val connection: Boolean = true
     }
 
-    final case class NotConnected(organizations: List[String]) extends Connection {
+    object Connected {
+      def of(head: String, tail: String*): Connected = Connected(NonEmptyList.of(head, tail: _*))
+    }
+
+    final case object NotConnected extends Connection {
       val connection: Boolean = false
     }
 
@@ -27,9 +31,7 @@ object model {
     final case class Errors(errors: NonEmptyList[Error])
 
     object Errors {
-
       def of(head: Error, tail: Error*): Errors = Errors(NonEmptyList.of(head, tail: _*))
-
     }
 
   }

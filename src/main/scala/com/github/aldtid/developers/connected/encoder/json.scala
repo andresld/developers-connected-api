@@ -8,6 +8,7 @@ import io.circe.syntax._
 import org.http4s.EntityEncoder
 import org.http4s.circe.jsonEncoder
 
+
 /**
  * Json representation for body encodings.
  */
@@ -19,8 +20,8 @@ object json {
     val base: Json = connection.asJson
 
     connection match {
-      case Connected => base
-      case c: NotConnected => base deepMerge c.asJson
+      case c: Connected => base deepMerge c.asJson
+      case NotConnected => base
     }
 
   }
