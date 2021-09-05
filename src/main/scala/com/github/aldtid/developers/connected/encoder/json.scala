@@ -1,10 +1,12 @@
-package com.github.aldtid.developers.connected.model.encoder
+package com.github.aldtid.developers.connected.encoder
 
 import com.github.aldtid.developers.connected.model.responses._
 
-import io.circe.{Encoder => CEncoder, Json}
+import io.circe.{Json, Encoder => CEncoder}
 import io.circe.generic.auto._
 import io.circe.syntax._
+import org.http4s.EntityEncoder
+import org.http4s.circe.jsonEncoder
 
 
 object json {
@@ -28,7 +30,9 @@ object json {
   implicit val jsonMissingResourceCirceEncoder: CEncoder[MissingResource.type] =
     _ => "missing resource".asJson
 
-  implicit val jsonResponseEncoder: ResponseEncoder[Json] = new ResponseEncoder[Json] {
+  implicit val jsonResponseEncoder: BodyEncoder[Json] = new BodyEncoder[Json] {
+
+    implicit def entityEncoder[F[_]]: EntityEncoder[F, Json] = jsonEncoder
 
     implicit val connectionEncoder: Encoder[Connection, Json] = jsonConnectionEncoder
     implicit val errorsEncoder: Encoder[Errors, Json] = jsonErrorsEncoder

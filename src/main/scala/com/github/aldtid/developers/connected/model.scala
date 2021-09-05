@@ -2,7 +2,8 @@ package com.github.aldtid.developers.connected
 
 import cats.data.NonEmptyList
 
-package object model {
+
+object model {
 
   object responses {
 

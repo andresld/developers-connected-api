@@ -1,11 +1,10 @@
 package com.github.aldtid.developers.connected
 
 import com.github.aldtid.developers.connected.logging.json.jsonProgramLog
-import com.github.aldtid.developers.connected.model.encoder.json.jsonResponseEncoder
+import com.github.aldtid.developers.connected.encoder.json.jsonResponseEncoder
 
 import cats.effect.{ExitCode, IO, IOApp}
 import io.circe.Json
-import org.http4s.circe.jsonEncoder
 import org.http4s.dsl.io
 import org.http4s.dsl.Http4sDsl
 import org.typelevel.log4cats.Logger

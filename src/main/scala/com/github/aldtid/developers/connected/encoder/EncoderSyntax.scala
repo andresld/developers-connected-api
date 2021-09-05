@@ -1,4 +1,4 @@
-package com.github.aldtid.developers.connected.model.encoder
+package com.github.aldtid.developers.connected.encoder
 
 
 class EncoderSyntax[A](a: A) {

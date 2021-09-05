@@ -1,4 +1,4 @@
-package com.github.aldtid.developers.connected.model.encoder
+package com.github.aldtid.developers.connected.encoder
 
 
 object implicits {
