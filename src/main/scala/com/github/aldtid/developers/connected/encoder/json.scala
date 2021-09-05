@@ -8,9 +8,12 @@ import io.circe.syntax._
 import org.http4s.EntityEncoder
 import org.http4s.circe.jsonEncoder
 
-
+/**
+ * Json representation for body encodings.
+ */
 object json {
 
+  // ----- ENCODING INSTANCES -----
   val jsonConnectionEncoder: Encoder[Connection, Json] = connection => {
 
     val base: Json = connection.asJson
@@ -23,12 +26,18 @@ object json {
   }
 
   val jsonErrorsEncoder: Encoder[Errors, Json] = _.asJson
+  // ----------
 
+  // ----- CIRCE INSTANCES -----
   implicit val jsonConnectionCirceEncoder: CEncoder[Connection] =
     connection => Json.obj("connected" -> connection.connection.asJson)
 
-  implicit val jsonMissingResourceCirceEncoder: CEncoder[MissingResource.type] =
-    _ => "missing resource".asJson
+  implicit val jsonErrorCirceEncoder: CEncoder[Error] = {
+    case InvalidGitHubUser(developer) => s"$developer is not a valid user in github".asJson
+    case InvalidTwitterUser(developer) => s"$developer is not a valid user in twitter".asJson
+    case MissingResource => "missing resource".asJson
+  }
+  // ----------
 
   implicit val jsonResponseEncoder: BodyEncoder[Json] = new BodyEncoder[Json] {
 

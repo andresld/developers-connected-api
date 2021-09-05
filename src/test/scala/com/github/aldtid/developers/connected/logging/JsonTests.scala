@@ -31,7 +31,7 @@ class JsonTests extends AnyFlatSpec with Matchers {
     val value2: Log[Json] = value1 |+| Message("test")
 
     value2.value shouldBe Json.obj("latency" -> Json.fromLong(1), "message"-> Json.fromString("test"))
-    value2.formatted shouldBe """{"message":"test","latency":1}"""
+    value2.formatted shouldBe """{"latency":1,"message":"test"}"""
 
   }
 

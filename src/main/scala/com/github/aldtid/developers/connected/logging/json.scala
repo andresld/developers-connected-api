@@ -15,7 +15,7 @@ import org.http4s.{Header, Request, Response}
 object json {
 
   // ----- BASE LOG INSTANCE -----
-  val jsonLog: Log[Json] = createLog[Json](Json.obj(), _.printWith(Printer.noSpaces))(_ deepMerge _)
+  val jsonLog: Log[Json] = createLog[Json](Json.obj(), _.printWith(Printer.noSpaces))((x, y) => y deepMerge x)
   // ----------
 
   // ----- LOGGABLE INSTANCES -----
