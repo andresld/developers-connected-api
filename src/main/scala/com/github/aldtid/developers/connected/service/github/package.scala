@@ -14,6 +14,7 @@ package object github {
 
   object response {
 
+    // Only matches required fields to identify an organization, as the rest of them will not be used
     final case class Organization(login: String, id: Long)
 
   }
@@ -22,6 +23,7 @@ package object github {
 
     sealed trait Error
     final case class DefaultError(message: String, documentationUrl: String) extends Error
+    final case class NotFound(message: String, documentationUrl: String) extends Error
     final case class UnexpectedResponse(status: Int, body: String, error: CError) extends Error
 
   }
