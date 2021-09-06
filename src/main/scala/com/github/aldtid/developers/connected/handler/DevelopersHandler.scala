@@ -2,8 +2,12 @@ package com.github.aldtid.developers.connected.handler
 
 import com.github.aldtid.developers.connected.model.Developers
 import com.github.aldtid.developers.connected.model.responses.{Connected, Connection, Error, NotConnected}
-import cats.Applicative
+import com.github.aldtid.developers.connected.service.github.GitHubService
+import com.github.aldtid.developers.connected.service.github.connection.GitHubConnection
+
 import cats.data.{EitherT, NonEmptyList}
+import cats.effect.Concurrent
+import org.http4s.client.Client
 
 
 trait DevelopersHandler[F[_]] {
@@ -14,10 +18,13 @@ trait DevelopersHandler[F[_]] {
 
 object DevelopersHandler {
 
-  def checkConnection[F[_] : Applicative](developers: Developers): EitherT[F, NonEmptyList[Error], Connection] =
+  def checkConnection[F[_] : Concurrent : Client](github: GitHubService[F],
+                                                  developers: Developers)
+                                                 (implicit ghConnection: GitHubConnection): EitherT[F, NonEmptyList[Error], Connection] =
     EitherT.pure(NotConnected)
 
-  def default[F[_] : Applicative]: DevelopersHandler[F] =
-    (developers: Developers) => DevelopersHandler.checkConnection(developers)
+  def default[F[_] : Concurrent : Client](github: GitHubService[F])
+                                         (implicit connection: GitHubConnection): DevelopersHandler[F] =
+    (developers: Developers) => DevelopersHandler.checkConnection(github, developers)
 
 }
