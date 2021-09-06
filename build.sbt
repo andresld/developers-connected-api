@@ -11,7 +11,9 @@ val compilerOptions: Seq[String] =
 val libDependencies: Seq[ModuleID] =
   Seq(
     dependencies.circe.generic,
+    dependencies.circe.parser,
     dependencies.http4s.circe,
+    dependencies.http4s.client,
     dependencies.http4s.dsl,
     dependencies.http4s.server,
     dependencies.log.binding,

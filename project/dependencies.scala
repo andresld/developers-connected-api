@@ -12,11 +12,13 @@ object dependencies {
   }
 
   lazy val circe = new {
-    val generic: ModuleID = "io.circe" %% "circe-generic" % version.circe
+    val generic: ModuleID = "io.circe" %% "circe-generic-extras" % version.circe
+    val parser: ModuleID = "io.circe" %% "circe-parser" % version.circe
   }
 
   lazy val http4s = new {
     val circe: ModuleID = "org.http4s" %% "http4s-circe" % version.http4s
+    val client: ModuleID = "org.http4s" %% "http4s-blaze-client" % version.http4s
     val dsl: ModuleID = "org.http4s" %% "http4s-dsl" % version.http4s
     val server: ModuleID = "org.http4s" %% "http4s-blaze-server" % version.http4s
   }
