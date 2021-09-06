@@ -8,7 +8,7 @@ import cats.data.EitherT
 import cats.effect.Concurrent
 import cats.implicits._
 import io.circe.Decoder
-import io.circe.generic.auto._
+import io.circe.generic.extras.auto._
 import io.circe.generic.extras.Configuration
 import io.circe.parser.decode
 import org.http4s.{BasicCredentials, Headers, Request, Response, Status, Uri}
