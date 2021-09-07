@@ -3,6 +3,7 @@ package com.github.aldtid.developers.connected.service.github
 import com.github.aldtid.developers.connected.service.github.connection.GitHubConnection
 import com.github.aldtid.developers.connected.service.github.response._
 import com.github.aldtid.developers.connected.service.github.error._
+import com.github.aldtid.developers.connected.service.utils
 
 import cats.data.EitherT
 import cats.effect.Concurrent
@@ -10,7 +11,6 @@ import cats.implicits._
 import io.circe.Decoder
 import io.circe.generic.extras.auto._
 import io.circe.generic.extras.Configuration
-import io.circe.parser.decode
 import org.http4s.{BasicCredentials, Headers, Request, Response, Status, Uri}
 import org.http4s.client.Client
 import org.http4s.headers.Authorization
@@ -72,8 +72,8 @@ object GitHubService {
 
     EitherT(client.run(request).use({
       case Status.Successful(response) => bodyAs[F, List[Organization]](response).map(identity)
-      case Status.NotFound(response)   => bodyAs[F, NotFound](response).map(_.flatMap(Left(_)))
-      case response                    => bodyAs[F, DefaultError](response).map(_.flatMap(Left(_)))
+      case Status.NotFound(response)   => utils.bodyAs(response, (_, body) => Left(NotFound(body)))
+      case response                    => utils.bodyAs(response, (s, b) => Left(UnexpectedResponse(s, b, None)))
     }))
 
   }
@@ -89,7 +89,7 @@ object GitHubService {
    * @return the body decoded as an instance of A or an error otherwise
    */
   def bodyAs[F[_] : Concurrent, A : Decoder](response: Response[F]): F[Either[UnexpectedResponse, A]] =
-    response.as[String].map(body => decode(body).leftMap(UnexpectedResponse(response.status.code, body, _)))
+    utils.bodyAs(response, (status, body, error) => UnexpectedResponse(status, body, Some(error)))
 
   /**
    * Creates a default implementation for the service using an F type as context.
