@@ -1,7 +1,11 @@
 package com.github.aldtid.developers.connected.logging
 
 import com.github.aldtid.developers.connected.logging.json.jsonProgramLog
-import com.github.aldtid.developers.connected.logging.model.{Latency, Message}
+import com.github.aldtid.developers.connected.logging.model._
+import com.github.aldtid.developers.connected.service.github.{error => gerror}
+import com.github.aldtid.developers.connected.service.github.response.Organization
+import com.github.aldtid.developers.connected.service.twitter.{error => terror}
+import com.github.aldtid.developers.connected.service.twitter.response.{Followers, Meta, User, UserData}
 
 import cats.Id
 import io.circe.Json
@@ -63,8 +67,92 @@ class JsonTests extends AnyFlatSpec with Matchers {
         )
       )
 
-    jsonProgramLog.latencyLoggable.format(Latency(1)) shouldBe Json.obj("latency" -> Json.fromInt(1))
     jsonProgramLog.messageLoggable.format(Message("test")) shouldBe Json.obj("message" -> Json.fromString("test"))
+    jsonProgramLog.tagLoggable.format(Tag("test")) shouldBe Json.obj("tag" -> Json.fromString("test"))
+    jsonProgramLog.usernameLoggable.format(Username("test")) shouldBe Json.obj("username" -> Json.fromString("test"))
+    jsonProgramLog.identifierLoggable.format(Identifier("test")) shouldBe Json.obj("id" -> Json.fromString("test"))
+    jsonProgramLog.latencyLoggable.format(Latency(1)) shouldBe Json.obj("latency" -> Json.fromInt(1))
+
+    jsonProgramLog.twitterUserDataLoggable.format(UserData(User("123", "name", "username"))) shouldBe
+      Json.obj(
+        "user" -> Json.obj(
+          "id" -> Json.fromString("123"),
+          "name" -> Json.fromString("name"),
+          "username" -> Json.fromString("username")
+        )
+      )
+
+    jsonProgramLog.twitterFollowersLoggable.format(Followers(Some(List(User("123", "name", "username"))), Meta(1))) shouldBe
+      Json.obj(
+        "followers" -> Json.arr(
+          Json.obj(
+            "id" -> Json.fromString("123"),
+            "name" -> Json.fromString("name"),
+            "username" -> Json.fromString("username")
+          )
+        ),
+        "meta" -> Json.obj(
+          "resultCount" -> Json.fromInt(1)
+        )
+      )
+
+    jsonProgramLog.twitterFollowersLoggable.format(Followers(None, Meta(1))) shouldBe
+      Json.obj(
+        "followers" -> Json.Null,
+        "meta" -> Json.obj(
+          "resultCount" -> Json.fromInt(1)
+        )
+      )
+
+    jsonProgramLog.twitterErrorLoggable.format(terror.NotFound("body")) shouldBe
+      Json.obj(
+        "error" -> Json.obj(
+          "notFound" -> Json.obj(
+            "body" -> Json.fromString("body")
+          )
+        )
+      )
+
+    jsonProgramLog.twitterErrorLoggable.format(terror.UnexpectedResponse(400, "body", None)) shouldBe
+      Json.obj(
+        "error" -> Json.obj(
+          "unexpected" -> Json.obj(
+            "status" -> Json.fromInt(400),
+            "body" -> Json.fromString("body"),
+            "error" -> Json.Null,
+          )
+        )
+      )
+
+    jsonProgramLog.githubOrganizationsLoggable.format(List(Organization("login", 123))) shouldBe
+      Json.obj(
+        "organizations" -> Json.arr(
+          Json.obj(
+            "login" -> Json.fromString("login"),
+            "id" -> Json.fromInt(123)
+          )
+        )
+      )
+
+    jsonProgramLog.githubErrorLoggable.format(gerror.NotFound("body")) shouldBe
+      Json.obj(
+        "error" -> Json.obj(
+          "notFound" -> Json.obj(
+            "body" -> Json.fromString("body")
+          )
+        )
+      )
+
+    jsonProgramLog.githubErrorLoggable.format(gerror.UnexpectedResponse(400, "body", None)) shouldBe
+      Json.obj(
+        "error" -> Json.obj(
+          "unexpected" -> Json.obj(
+            "status" -> Json.fromInt(400),
+            "body" -> Json.fromString("body"),
+            "error" -> Json.Null,
+          )
+        )
+      )
 
   }
 

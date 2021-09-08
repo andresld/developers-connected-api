@@ -6,11 +6,12 @@ import com.github.aldtid.developers.connected.encoder.implicits._
 import com.github.aldtid.developers.connected.logging.ProgramLog
 import com.github.aldtid.developers.connected.logging.implicits.all._
 import com.github.aldtid.developers.connected.logging.messages._
+import com.github.aldtid.developers.connected.logging.tags.routerTag
 import com.github.aldtid.developers.connected.model.Developers
 import com.github.aldtid.developers.connected.model.responses.{Errors, MissingResource}
 
 import cats.Monad
-import cats.effect.Sync
+import cats.effect.{Clock, Sync}
 import cats.implicits._
 import org.http4s.{HttpApp, Request, Response}
 import org.http4s.dsl.Http4sDsl
@@ -31,8 +32,8 @@ object application {
    * @tparam O body type to encode
    * @return an application that handles every API route
    */
-  def app[F[_] : Sync : Logger : Http4sDsl, L, O : BodyEncoder](controller: DevelopersHandler[F])
-                                                               (implicit pl: ProgramLog[L]): HttpApp[F] = {
+  def app[F[_] : Sync : Clock : Logger : Http4sDsl, L, O : BodyEncoder](controller: DevelopersHandler[F])
+                                                                       (implicit pl: ProgramLog[L]): HttpApp[F] = {
 
     import pl._
 
@@ -43,14 +44,14 @@ object application {
 
       for {
 
-        start    <- Sync[F].realTime
-        _        <- Logger[F].info(incomingRequest |+| request)
+        start    <- Clock[F].realTime
+        _        <- Logger[F].info(incomingRequest |+| request |+| routerTag)
 
         response <- process(request)
 
-        end      <- Sync[F].realTime
+        end      <- Clock[F].realTime
         latency   = (end - start).toMillis.asLatency
-        _        <- Logger[F].info(outgoingResponse |+| response |+| latency)
+        _        <- Logger[F].info(outgoingResponse |+| response |+| latency |+| routerTag)
 
       } yield response
 

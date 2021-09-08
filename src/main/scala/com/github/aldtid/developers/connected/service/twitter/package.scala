@@ -4,18 +4,23 @@ import io.circe.{Error => CError}
 import org.http4s.Uri
 
 
-package object github {
+package object twitter {
 
   object connection {
 
-    final case class GitHubConnection(baseUri: Uri, username: String, token: String)
+    final case class TwitterConnection(baseUri: Uri, token: String)
 
   }
 
   object response {
 
-    // Only matches required fields to identify an organization, as the rest of them will not be used
-    final case class Organization(login: String, id: Long)
+    final case class User(id: String, name: String, username: String)
+
+    final case class UserData(data: User)
+
+    final case class Meta(resultCount: Long)
+
+    final case class Followers(data: Option[List[User]], meta: Meta)
 
   }
 

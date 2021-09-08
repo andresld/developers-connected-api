@@ -30,7 +30,7 @@ trait Log[L] {
    * @tparam A generic type to log
    * @return a new Log with the representation of passed A instance as part of it
    */
-  def  |+|[A](a: A)(implicit loggable: Loggable[A, L]): Log[L]
+  def |+|[A](a: A)(implicit loggable: Loggable[A, L]): Log[L]
 
   /**
    * Formats the Log value into a String representation.

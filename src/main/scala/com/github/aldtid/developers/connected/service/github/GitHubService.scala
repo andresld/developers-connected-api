@@ -1,19 +1,25 @@
 package com.github.aldtid.developers.connected.service.github
 
+import com.github.aldtid.developers.connected.logging.implicits.all._
+import com.github.aldtid.developers.connected.logging.messages._
+import com.github.aldtid.developers.connected.logging.tags.githubTag
 import com.github.aldtid.developers.connected.service.github.connection.GitHubConnection
 import com.github.aldtid.developers.connected.service.github.response._
 import com.github.aldtid.developers.connected.service.github.error._
+import com.github.aldtid.developers.connected.service.util
 
 import cats.data.EitherT
 import cats.effect.Concurrent
+import cats.effect.kernel.Clock
 import cats.implicits._
+import com.github.aldtid.developers.connected.logging.{Log, ProgramLog}
 import io.circe.Decoder
 import io.circe.generic.extras.auto._
 import io.circe.generic.extras.Configuration
-import io.circe.parser.decode
 import org.http4s.{BasicCredentials, Headers, Request, Response, Status, Uri}
 import org.http4s.client.Client
 import org.http4s.headers.Authorization
+import org.typelevel.log4cats.Logger
 
 
 /**
@@ -33,16 +39,22 @@ trait GitHubService[F[_]] {
    * In case an error happens during the retrieve, then it is returned as a Left. If the returned response is not an
    * error that means that passed user exists.
    *
-   * @param user GitHub user to retrieve organizations for
+   * Request, response and function result are logged.
+   *
+   * @param username GitHub username to retrieve organizations for
    * @param F Concurrent instance
+   * @param C Clock instance
    * @param client http client
+   * @param logger logger instance
    * @param connection connection information to perform the requests
    * @return the user organizations list if it exists or an error otherwise
    */
-  def getOrganizations(user: String)
-                      (implicit F: Concurrent[F],
-                       client: Client[F],
-                       connection: GitHubConnection): EitherT[F, Error, List[Organization]]
+  def getOrganizations[L : ProgramLog](username: String)
+                                      (implicit F: Concurrent[F],
+                                       C: Clock[F],
+                                       client: Client[F],
+                                       logger: Logger[F],
+                                       connection: GitHubConnection): EitherT[F, Error, List[Organization]]
 
 }
 
@@ -56,25 +68,32 @@ object GitHubService {
   /**
    * Organizations retrieve default implementation.
    *
-   * @param user GitHub user to retrieve organizations for
+   * @param username GitHub username to retrieve organizations for
    * @param client http client
    * @param connection connection information to perform the requests
    * @tparam F context type
    * @return the user organizations list if it exists or an error otherwise
    */
-  def getOrganizations[F[_] : Concurrent](user: String)
-                                         (implicit client: Client[F],
-                                          connection: GitHubConnection): EitherT[F, Error, List[Organization]] = {
+  def getOrganizations[F[_] : Concurrent : Clock: Logger, L](username: String)
+                                                            (implicit client: Client[F],
+                                                             pl: ProgramLog[L],
+                                                             connection: GitHubConnection): F[Either[Error, List[Organization]]] = {
 
-    val uri: Uri = connection.baseUri / "users" / user / "orgs"
+    import pl._
+
+    val uri: Uri = connection.baseUri / "users" / username / "orgs"
     val headers: Headers = Headers(Authorization(BasicCredentials(connection.username, connection.token)))
     val request: Request[F] = Request(uri = uri, headers = headers)
+    val baseLog: Log[L] = username.asUsername |+| githubTag
 
-    EitherT(client.run(request).use({
+    val handle: Response[F] => F[Either[Error, List[Organization]]] = {
       case Status.Successful(response) => bodyAs[F, List[Organization]](response).map(identity)
-      case Status.NotFound(response)   => bodyAs[F, NotFound](response).map(_.flatMap(Left(_)))
-      case response                    => bodyAs[F, DefaultError](response).map(_.flatMap(Left(_)))
-    }))
+      case Status.NotFound(response)   => util.bodyAs(response, (_, body) => Left(NotFound(body)))
+      case response                    => util.bodyAs(response, (s, b) => Left(UnexpectedResponse(s, b, None)))
+    }
+
+    util.requestWithLogs(request, baseLog |+| githubOrganizationsRequest, baseLog |+| githubOrganizationsResponse, handle)
+      .flatTap(util.logResult(baseLog |+| githubOrganizationsSuccess, baseLog |+| githubOrganizationsError))
 
   }
 
@@ -89,7 +108,7 @@ object GitHubService {
    * @return the body decoded as an instance of A or an error otherwise
    */
   def bodyAs[F[_] : Concurrent, A : Decoder](response: Response[F]): F[Either[UnexpectedResponse, A]] =
-    response.as[String].map(body => decode(body).leftMap(UnexpectedResponse(response.status.code, body, _)))
+    util.bodyAs(response, (status, body, error) => UnexpectedResponse(status, body, Some(error)))
 
   /**
    * Creates a default implementation for the service using an F type as context.
@@ -99,11 +118,13 @@ object GitHubService {
    */
   def default[F[_]]: GitHubService[F] = new GitHubService[F] {
 
-    def getOrganizations(user: String)
-                        (implicit F: Concurrent[F],
-                         client: Client[F],
-                         connection: GitHubConnection): EitherT[F, Error, List[Organization]] =
-      GitHubService.getOrganizations(user)
+    def getOrganizations[L : ProgramLog](username: String)
+                                        (implicit F: Concurrent[F],
+                                         C: Clock[F],
+                                         client: Client[F],
+                                         logger: Logger[F],
+                                         connection: GitHubConnection): EitherT[F, Error, List[Organization]] =
+      EitherT(GitHubService.getOrganizations(username))
 
   }
 
