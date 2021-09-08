@@ -15,6 +15,7 @@ object syntax {
 
   class LongSyntax(value: Long) {
     def asLatency: Latency = Latency(value)
+    def asThreadPool: ThreadPool = ThreadPool(value)
   }
 
 }

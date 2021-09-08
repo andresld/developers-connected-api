@@ -19,6 +19,7 @@ val libDependencies: Seq[ModuleID] =
     dependencies.http4s.server,
     dependencies.log.binding,
     dependencies.log.slf4j,
+    dependencies.pureconfig.config,
     dependencies.test.core
   )
 

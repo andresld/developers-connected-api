@@ -12,5 +12,6 @@ package object model {
   final case class Identifier(id: String)
 
   final case class Latency(latency: Long)
+  final case class ThreadPool(threadPool: Long)
 
 }
