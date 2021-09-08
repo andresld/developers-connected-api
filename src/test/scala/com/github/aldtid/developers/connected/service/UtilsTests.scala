@@ -47,9 +47,9 @@ class UtilsTests extends AnyFlatSpec with Matchers {
   "bodyAs" should "decode a response body as expected" in {
 
     val body: String = "1"
-    val response: Response[IO] = Response(Status.BadRequest, body = Stream(body.getBytes: _*))
+    val response: Response[IO] = Response(Status.BadRequest, body = Stream.iterable(body.getBytes))
 
-    bodyAs[IO, String, Int](response, (_, body, _) => body).unsafeRunSync shouldBe Right(1)
+    bodyAs[IO, String, Int](response, (_, body, _) => body).unsafeRunSync() shouldBe Right(1)
 
   }
 
@@ -57,7 +57,7 @@ class UtilsTests extends AnyFlatSpec with Matchers {
 
     val response: Response[IO] = Response(Status.BadRequest, body = Stream())
     val either: Either[(Int, String, Error), Int] =
-      bodyAs[IO, (Int, String, Error), Int](response, (i, b, e) => (i, b, e)).unsafeRunSync
+      bodyAs[IO, (Int, String, Error), Int](response, (i, b, e) => (i, b, e)).unsafeRunSync()
 
     either match {
 
@@ -75,9 +75,9 @@ class UtilsTests extends AnyFlatSpec with Matchers {
   "bodyAs" should "extract a response body as String and apply the passed function" in {
 
     val body: String = "1"
-    val response: Response[IO] = Response(Status.BadRequest, body = Stream(body.getBytes: _*))
+    val response: Response[IO] = Response(Status.BadRequest, body = Stream.iterable(body.getBytes))
 
-    bodyAs[IO, String](response, (_, body) => s"handled: $body").unsafeRunSync shouldBe "handled: 1"
+    bodyAs[IO, String](response, (_, body) => s"handled: $body").unsafeRunSync() shouldBe "handled: 1"
 
   }
 

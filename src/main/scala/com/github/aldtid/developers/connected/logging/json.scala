@@ -60,8 +60,8 @@ object json {
     error => wrapError(jsonTwitterError(error))
 
   val jsonTwitterError: terror.Error => Json = {
-    case error: terror.NotFound => error.asJson
-    case error: terror.UnexpectedResponse => error.asJson
+    case error: terror.NotFound => Json.obj("notFound" -> error.asJson)
+    case error: terror.UnexpectedResponse => Json.obj("unexpected" -> error.asJson)
   }
 
   val jsonGithubOrganizationsLoggable: Loggable[List[Organization], Json] =
@@ -71,8 +71,8 @@ object json {
     error => wrapError(jsonGithubError(error))
 
   val jsonGithubError: gerror.Error => Json = {
-    case error: gerror.NotFound => error.asJson
-    case error: gerror.UnexpectedResponse => error.asJson
+    case error: gerror.NotFound => Json.obj("notFound" -> error.asJson)
+    case error: gerror.UnexpectedResponse => Json.obj("unexpected" -> error.asJson)
   }
   // ----------
 
