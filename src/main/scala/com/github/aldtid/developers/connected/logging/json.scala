@@ -95,15 +95,15 @@ object json {
   // ----------
 
   // ----- CIRCE ENCODERS -----
-  implicit val circeErrorEncoder: Encoder[CError] = _.asJson
+  implicit val circeErrorEncoder: Encoder[CError] = (_: Throwable).asJson
 
   implicit val exceptionEncoder: Encoder[Throwable] =
     throwable =>
       Json.obj(
-        "class" -> throwable.getClass.getCanonicalName.asJson,
+        "class" -> throwable.getClass.getName.asJson,
         "message" -> throwable.getMessage.asJson,
         "trace" -> stackTraceToString(throwable).asJson,
-        "cause" -> throwable.getCause.asJson
+        "cause" -> Option(throwable.getCause).asJson
       )
   // ----------
 

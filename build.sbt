@@ -5,6 +5,7 @@ val compilerOptions: Seq[String] =
     "-language:higherKinds",
     "-language:implicitConversions",
     "-feature",
+    "-deprecation",
     "-unchecked"
   )
 

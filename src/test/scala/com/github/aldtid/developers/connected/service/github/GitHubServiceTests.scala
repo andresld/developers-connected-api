@@ -33,7 +33,7 @@ class GitHubServiceTests extends AnyFlatSpec with Matchers {
     val expectedHeaders: Headers = Headers(Raw(CIString("Authorization"), "Basic dXNlcm5hbWU6dG9rZW4="))
 
     val body: String = """[{"id":123,"login":"organization"}]"""
-    val response: Response[IO] = Response(Status.Ok, body = Stream(body.getBytes: _*))
+    val response: Response[IO] = Response(Status.Ok, body = Stream.iterable(body.getBytes))
 
     def behavior(request: Request[IO]): Resource[IO, Response[IO]] = {
 
@@ -48,11 +48,11 @@ class GitHubServiceTests extends AnyFlatSpec with Matchers {
     implicit val connection: GitHubConnection = GitHubConnection(baseUri, "username", "token")
     implicit val client: Client[IO] = Client[IO](behavior)
 
-    getOrganizations[IO, Json]("user").unsafeRunSync shouldBe Right(List(Organization("organization", 123)))
+    getOrganizations[IO, Json]("user").unsafeRunSync() shouldBe Right(List(Organization("organization", 123)))
 
   }
 
-  it should "correctly decode a NotFound response as expected" in {
+  it should "handle a NotFound response as expected" in {
 
     val baseUri: Uri = Uri() / "root"
 
@@ -60,7 +60,7 @@ class GitHubServiceTests extends AnyFlatSpec with Matchers {
     val expectedHeaders: Headers = Headers(Raw(CIString("Authorization"), "Basic dXNlcm5hbWU6dG9rZW4="))
 
     val body: String = """{"message":"Not Found","documentation_url":"url"}"""
-    val response: Response[IO] = Response(Status.NotFound, body = Stream(body.getBytes: _*))
+    val response: Response[IO] = Response(Status.NotFound, body = Stream.iterable(body.getBytes))
 
     def behavior(request: Request[IO]): Resource[IO, Response[IO]] = {
 
@@ -75,11 +75,11 @@ class GitHubServiceTests extends AnyFlatSpec with Matchers {
     implicit val connection: GitHubConnection = GitHubConnection(baseUri, "username", "token")
     implicit val client: Client[IO] = Client[IO](behavior)
 
-    getOrganizations[IO, Json]("user").unsafeRunSync shouldBe Left(NotFound(body))
+    getOrganizations[IO, Json]("user").unsafeRunSync() shouldBe Left(NotFound(body))
 
   }
 
-  it should "correctly decode a BadRequest response as expected" in {
+  it should "handle an unexpected response as expected" in {
 
     val baseUri: Uri = Uri() / "root"
 
@@ -87,7 +87,7 @@ class GitHubServiceTests extends AnyFlatSpec with Matchers {
     val expectedHeaders: Headers = Headers(Raw(CIString("Authorization"), "Basic dXNlcm5hbWU6dG9rZW4="))
 
     val body: String = """{"message":"Bad Request","documentation_url":"url"}"""
-    val response: Response[IO] = Response(Status.BadRequest, body = Stream(body.getBytes: _*))
+    val response: Response[IO] = Response(Status.BadRequest, body = Stream.iterable(body.getBytes))
 
     def behavior(request: Request[IO]): Resource[IO, Response[IO]] = {
 
@@ -102,23 +102,23 @@ class GitHubServiceTests extends AnyFlatSpec with Matchers {
     implicit val connection: GitHubConnection = GitHubConnection(baseUri, "username", "token")
     implicit val client: Client[IO] = Client[IO](behavior)
 
-    getOrganizations[IO, Json]("user").unsafeRunSync shouldBe Left(UnexpectedResponse(400, body, None))
+    getOrganizations[IO, Json]("user").unsafeRunSync() shouldBe Left(UnexpectedResponse(400, body, None))
 
   }
 
   "bodyAs" should "decode a response body as expected" in {
 
     val body: String = """[{"login":"org","id":123}]"""
-    val response: Response[IO] = Response(Status.BadRequest, body = Stream(body.getBytes: _*))
+    val response: Response[IO] = Response(Status.Ok, body = Stream.iterable(body.getBytes))
 
-    bodyAs[IO, List[Organization]](response).unsafeRunSync shouldBe Right(List(Organization("org", 123)))
+    bodyAs[IO, List[Organization]](response).unsafeRunSync() shouldBe Right(List(Organization("org", 123)))
 
   }
 
   it should "return an UnexpectedResponse if body cannot be decoded" in {
 
     val response: Response[IO] = Response(Status.BadRequest, body = Stream())
-    val either: Either[UnexpectedResponse, List[Organization]] = bodyAs[IO, List[Organization]](response).unsafeRunSync
+    val either: Either[UnexpectedResponse, List[Organization]] = bodyAs[IO, List[Organization]](response).unsafeRunSync()
 
     either match {
 
