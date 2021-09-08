@@ -8,6 +8,9 @@ object syntax {
 
   class StringSyntax(value: String) {
     def asMessage: Message = Message(value)
+    def asTag: Tag = Tag(value)
+    def asUsername: Username = Username(value)
+    def asIdentifier: Identifier = Identifier(value)
   }
 
   class LongSyntax(value: Long) {

@@ -1,6 +1,11 @@
 package com.github.aldtid.developers.connected.logging
 
-import com.github.aldtid.developers.connected.logging.model.{Latency, Message}
+import com.github.aldtid.developers.connected.logging.model._
+import com.github.aldtid.developers.connected.service.github.response._
+import com.github.aldtid.developers.connected.service.github.error.{Error => GError}
+import com.github.aldtid.developers.connected.service.twitter.response._
+import com.github.aldtid.developers.connected.service.twitter.error.{Error => TError}
+
 import org.http4s.{Request, Response}
 
 
@@ -18,10 +23,24 @@ trait ProgramLog[L] {
   // Logging instance
   implicit val log: Log[L]
 
-  // Supported types to be logged
+  // Supported http4s types
   implicit def requestLoggable[F[_]]: Loggable[Request[F], L]
   implicit def responseLoggable[F[_]]: Loggable[Response[F], L]
+
+  // Supported common model types
   implicit val messageLoggable: Loggable[Message, L]
+  implicit val tagLoggable: Loggable[Tag, L]
+  implicit val usernameLoggable: Loggable[Username, L]
+  implicit val identifierLoggable: Loggable[Identifier, L]
   implicit val latencyLoggable: Loggable[Latency, L]
+
+  // Supported Twitter model types
+  implicit val twitterUserDataLoggable: Loggable[UserData, L]
+  implicit val twitterFollowersLoggable: Loggable[Followers, L]
+  implicit val twitterErrorLoggable: Loggable[TError, L]
+
+  // Supported GitHub model types
+  implicit val githubOrganizationsLoggable: Loggable[List[Organization], L]
+  implicit val githubErrorLoggable: Loggable[GError, L]
 
 }

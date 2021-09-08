@@ -7,6 +7,10 @@ package com.github.aldtid.developers.connected.logging
 package object model {
 
   final case class Message(message: String)
+  final case class Tag(tag: String)
+  final case class Username(username: String)
+  final case class Identifier(id: String)
+
   final case class Latency(latency: Long)
 
 }
