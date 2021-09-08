@@ -29,12 +29,16 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService}
 object launcher {
 
   /**
+   * Tries to load a configuration from the file system.
    *
-   * @param f
-   * @param pl
-   * @tparam F
-   * @tparam L
-   * @return
+   * In case the load succeeds, a function is applied for parsed configuration, otherwise the exit code is a failure.
+   * Logs are shown before and after loading the configuration.
+   *
+   * @param f function to apply if the load succeeds
+   * @param pl logging instances
+   * @tparam F context type
+   * @tparam L logging type to format
+   * @return the resulting exit code of applying passed function or a failed configuration load
    */
   def handleConfiguration[F[_] : Sync : Logger, L](f: Configuration => F[ExitCode])
                                                   (implicit pl: ProgramLog[L]): F[ExitCode] = {
@@ -53,19 +57,29 @@ object launcher {
   }
 
   /**
+   * Creates a fixed thread pool with passed size.
    *
-   * @param threads
-   * @tparam F
-   * @return
+   * @param size thread pool size
+   * @tparam F context type
+   * @return the thread pool
    */
-  def threadPool[F[_]: Sync](threads: Int): F[ExecutionContextExecutorService] =
-    Sync[F].delay(ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(threads)))
+  def threadPool[F[_]: Sync](size: Int): F[ExecutionContextExecutorService] =
+    Sync[F].delay(ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(size)))
 
   /**
+   * Prepares the environment to run the server and starts it.
    *
-   * @tparam F
-   * @tparam L
-   * @tparam O
+   * The environment steps to prepare before the server run are:
+   *   - the configuration load
+   *   - thread pools creation
+   *   - endpoint handler
+   *   - a HTTP client to perform requests
+   *
+   * If the configuration load fails, the application will not be started.
+   *
+   * @tparam F context type
+   * @tparam L logging type to format
+   * @tparam O body type to encode
    * @return
    */
   def prepareAndStart[F[_] : Async : Http4sDsl : Logger, L, O : BodyEncoder](implicit pl: ProgramLog[L]): F[ExitCode] = {
@@ -109,16 +123,17 @@ object launcher {
   }
 
   /**
+   * Starts a server with passed thread pool, server configuration and endpoints handler.
    *
-   * @param ec
-   * @param server
-   * @param developersHandler
-   * @param ghConnection
-   * @param twConnection
-   * @tparam F
-   * @tparam L
-   * @tparam O
-   * @return
+   * @param ec server thread pool
+   * @param server server configuration
+   * @param developersHandler developer endpoints handler
+   * @param ghConnection github connection
+   * @param twConnection twitter connection
+   * @tparam F context type
+   * @tparam L logging type to format
+   * @tparam O body type to encode
+   * @return the exit code for the server
    */
   def start[F[_] : Async : Http4sDsl : Client : Logger, L : ProgramLog, O : BodyEncoder](ec: ExecutionContext,
                                                                                          server: Server,

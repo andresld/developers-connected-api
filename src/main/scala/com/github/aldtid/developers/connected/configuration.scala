@@ -10,6 +10,8 @@ import pureconfig.generic.auto._
 
 object configuration {
 
+  import implicits._
+
   final case class Configuration(server: Server, github: GitHub, twitter: Twitter, threadPools: ThreadPools)
 
   final case class Server(host: String, port: Int, basePath: String)
@@ -20,12 +22,22 @@ object configuration {
 
   final case class ThreadPools(server: Int, client: Int)
 
-  implicit val uriConfigReader: ConfigReader[Uri] =
-    ConfigReader.fromString(string =>
-      Uri.fromString(string).leftMap(error => CannotConvert(string, "Uri", error.sanitized))
-    )
-
+  /**
+   * Reads a configuration file from the file system and tries to parse it.
+   *
+   * @tparam F context type
+   * @return the loaded configuration or a reading failure
+   */
   def loadConfiguration[F[_] : Sync]: F[Either[ConfigReaderFailures, Configuration]] =
     Sync[F].delay(ConfigSource.default.load[Configuration])
+
+  object implicits {
+
+    implicit val uriConfigReader: ConfigReader[Uri] =
+      ConfigReader.fromString(string =>
+        Uri.fromString(string).leftMap(error => CannotConvert(string, "Uri", error.sanitized))
+      )
+
+  }
 
 }
