@@ -1,12 +1,16 @@
 package com.github.aldtid.developers.connected.service.twitter
 
-import com.github.aldtid.developers.connected.service.utils
+import com.github.aldtid.developers.connected.logging.{Log, ProgramLog}
+import com.github.aldtid.developers.connected.logging.implicits.all._
+import com.github.aldtid.developers.connected.logging.messages._
+import com.github.aldtid.developers.connected.logging.tags.twitterTag
+import com.github.aldtid.developers.connected.service.util
 import com.github.aldtid.developers.connected.service.twitter.connection.TwitterConnection
 import com.github.aldtid.developers.connected.service.twitter.error._
 import com.github.aldtid.developers.connected.service.twitter.response.{Followers, UserData}
 
 import cats.data.EitherT
-import cats.effect.Concurrent
+import cats.effect.{Clock, Concurrent}
 import cats.implicits._
 import io.circe.Decoder
 import io.circe.generic.extras.Configuration
@@ -16,6 +20,8 @@ import org.http4s.Credentials.Token
 import org.http4s.{Headers, Request, Response, Status, Uri}
 import org.http4s.client.Client
 import org.http4s.headers.Authorization
+import org.typelevel.log4cats.Logger
+
 
 /**
  * Defines a service to interact with [[https://dev.twitter.com/rest/public Twitter API]].
@@ -34,16 +40,23 @@ trait TwitterService[F[_]] {
    * In case an error happens during the retrieve, then it is returned as a Left. If the returned response is not an
    * error that means that passed user exists.
    *
+   * Request, response and function result are logged.
+   *
    * @param username Twitter username to retrieve the user information for
+   * @param C Clock instance
    * @param F Concurrent instance
    * @param client http client
+   * @param logger logger instance
    * @param connection connection information to perform the requests
+   * @tparam L type to format the logs
    * @return the user information for related username if it exists or an error otherwise
    */
-  def getUserByUsername(username: String)
-                       (implicit F: Concurrent[F],
-                        client: Client[F],
-                        connection: TwitterConnection): EitherT[F, Error, UserData]
+  def getUserByUsername[L : ProgramLog](username: String)
+                                       (implicit F: Concurrent[F],
+                                        C: Clock[F],
+                                        client: Client[F],
+                                        logger: Logger[F],
+                                        connection: TwitterConnection): EitherT[F, Error, UserData]
 
   /**
    * Retrieves the followers for passed identifier.
@@ -51,16 +64,23 @@ trait TwitterService[F[_]] {
    * In case an error happens during the retrieve, then it is returned as a Left. If the returned response is not an
    * error that means that passed user exists.
    *
+   * Request, response and function result are logged.
+   *
    * @param id Twitter identifier to retrieve the followers for
    * @param F Concurrent instance
+   * @param C Clock instance
    * @param client http client
+   * @param logger logger instance
    * @param connection connection information to perform the requests
+   * @tparam L type to format the logs
    * @return the user followers for related identifier or an error otherwise
    */
-  def getUserFollowers(id: String)
-                      (implicit F: Concurrent[F],
-                       client: Client[F],
-                       connection: TwitterConnection): EitherT[F, Error, Followers]
+  def getUserFollowers[L : ProgramLog](id: String)
+                                      (implicit F: Concurrent[F],
+                                       C: Clock[F],
+                                       client: Client[F],
+                                       logger: Logger[F],
+                                       connection: TwitterConnection): EitherT[F, Error, Followers]
 
 }
 
@@ -78,20 +98,28 @@ object TwitterService {
    * @param client http client
    * @param connection connection information to perform the requests
    * @tparam F context type
+   * @tparam L type to format the logs
    * @return the user if it exists or an error otherwise
    */
-  def getUserByUsername[F[_] : Concurrent](username: String)
-                                          (implicit client: Client[F],
-                                           connection: TwitterConnection): EitherT[F, Error, UserData] = {
+  def getUserByUsername[F[_] : Concurrent : Clock : Logger, L](username: String)
+                                                              (implicit client: Client[F],
+                                                               pl: ProgramLog[L],
+                                                               connection: TwitterConnection): F[Either[Error, UserData]] = {
+
+    import pl._
 
     val uri: Uri = connection.baseUri / "users" / "by" / "username" / username
     val request: Request[F] = Request(uri = uri, headers = Headers(authHeader))
+    val baseLog: Log[L] = username.asUsername |+| twitterTag
 
-    EitherT(client.run(request).use({
+    val handle: Response[F] => F[Either[Error, UserData]] = {
       case Status.Successful(response) => bodyAs[F, UserData](response).map(identity)
-      case Status.NotFound(response)   => utils.bodyAs(response, (_, body) => Left(NotFound(body)))
-      case response                    => utils.bodyAs(response, (s, b) => Left(UnexpectedResponse(s, b, None)))
-    }))
+      case Status.NotFound(response)   => util.bodyAs(response, (_, body) => Left(NotFound(body)))
+      case response                    => util.bodyAs(response, (s, b) => Left(UnexpectedResponse(s, b, None)))
+    }
+
+    util.requestWithLogs(request, baseLog |+| twitterUserRequest, baseLog |+| twitterUserResponse, handle)
+      .flatTap(util.logResult(baseLog |+| twitterUserSuccess, baseLog |+| twitterUserError))
 
   }
 
@@ -104,19 +132,27 @@ object TwitterService {
    * @param client http client
    * @param connection connection information to perform the requests
    * @tparam F context type
+   * @tparam L type to format the logs
    * @return the user followers or an error otherwise
    */
-  def getUserFollowers[F[_] : Concurrent](id: String)
-                                         (implicit client: Client[F],
-                                          connection: TwitterConnection): EitherT[F, Error, Followers] = {
+  def getUserFollowers[F[_] : Concurrent : Clock : Logger, L](id: String)
+                                                             (implicit client: Client[F],
+                                                              pl: ProgramLog[L],
+                                                              connection: TwitterConnection): F[Either[Error, Followers]] = {
+
+    import pl._
 
     val uri: Uri = connection.baseUri / "users" / id / "followers"
     val request: Request[F] = Request(uri = uri, headers = Headers(authHeader))
+    val baseLog: Log[L] = id.asIdentifier |+| twitterTag
 
-    EitherT(client.run(request).use({
+    val handle: Response[F] => F[Either[Error, Followers]] = {
       case Status.Successful(response) => bodyAs[F, Followers](response).map(identity)
-      case response                    => utils.bodyAs(response, (s, b) => Left(UnexpectedResponse(s, b, None)))
-    }))
+      case response                    => util.bodyAs(response, (s, b) => Left(UnexpectedResponse(s, b, None)))
+    }
+
+    util.requestWithLogs(request, baseLog |+| twitterFollowersRequest, baseLog |+| twitterFollowersResponse, handle)
+      .flatTap(util.logResult(baseLog |+| twitterFollowersSuccess, baseLog |+| twitterFollowersError))
 
   }
 
@@ -140,7 +176,7 @@ object TwitterService {
    * @return the body decoded as an instance of A or an error otherwise
    */
   def bodyAs[F[_] : Concurrent, A : Decoder](response: Response[F]): F[Either[UnexpectedResponse, A]] =
-    utils.bodyAs(response, (status, body, error) => UnexpectedResponse(status, body, Some(error)))
+    util.bodyAs(response, (status, body, error) => UnexpectedResponse(status, body, Some(error)))
 
   /**
    * Creates a default implementation for the service using an F type as context.
@@ -150,17 +186,21 @@ object TwitterService {
    */
   def default[F[_]]: TwitterService[F] = new TwitterService[F] {
 
-    def getUserByUsername(username: String)
-                         (implicit F: Concurrent[F],
-                          client: Client[F],
-                          connection: TwitterConnection): EitherT[F, Error, UserData] =
-      TwitterService.getUserByUsername(username)
+    def getUserByUsername[L : ProgramLog](username: String)
+                                         (implicit F: Concurrent[F],
+                                          C: Clock[F],
+                                          client: Client[F],
+                                          logger: Logger[F],
+                                          connection: TwitterConnection): EitherT[F, Error, UserData] =
+      EitherT(TwitterService.getUserByUsername(username))
 
-    def getUserFollowers(id: String)
-                        (implicit F: Concurrent[F],
-                         client: Client[F],
-                         connection: TwitterConnection): EitherT[F, Error, Followers] =
-      TwitterService.getUserFollowers(id)
+    def getUserFollowers[L : ProgramLog](id: String)
+                                        (implicit F: Concurrent[F],
+                                         C: Clock[F],
+                                         client: Client[F],
+                                         logger: Logger[F],
+                                         connection: TwitterConnection): EitherT[F, Error, Followers] =
+      EitherT(TwitterService.getUserFollowers(id))
 
   }
 

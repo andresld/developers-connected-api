@@ -1,5 +1,6 @@
 package com.github.aldtid.developers.connected.service.github
 
+import com.github.aldtid.developers.connected.logging.json.jsonProgramLog
 import com.github.aldtid.developers.connected.service.github.GitHubService._
 import com.github.aldtid.developers.connected.service.github.connection.GitHubConnection
 import com.github.aldtid.developers.connected.service.github.error.{NotFound, UnexpectedResponse}
@@ -8,6 +9,7 @@ import com.github.aldtid.developers.connected.service.github.response.Organizati
 import cats.effect.{IO, Resource}
 import cats.effect.unsafe.implicits.global
 import fs2.Stream
+import io.circe.Json
 import io.circe.generic.extras.auto._
 import org.http4s.Header.Raw
 import org.http4s.{Headers, Method, Request, Response, Status, Uri}
@@ -15,9 +17,13 @@ import org.http4s.client.Client
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.typelevel.ci.CIString
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 
 class GitHubServiceTests extends AnyFlatSpec with Matchers {
+
+  implicit val logger: Logger[IO] = Slf4jLogger.getLogger
 
   "getOrganizations" should "correctly decode an Ok response as expected" in {
 
@@ -42,7 +48,7 @@ class GitHubServiceTests extends AnyFlatSpec with Matchers {
     implicit val connection: GitHubConnection = GitHubConnection(baseUri, "username", "token")
     implicit val client: Client[IO] = Client[IO](behavior)
 
-    getOrganizations[IO]("user").value.unsafeRunSync shouldBe Right(List(Organization("organization", 123)))
+    getOrganizations[IO, Json]("user").unsafeRunSync shouldBe Right(List(Organization("organization", 123)))
 
   }
 
@@ -69,7 +75,7 @@ class GitHubServiceTests extends AnyFlatSpec with Matchers {
     implicit val connection: GitHubConnection = GitHubConnection(baseUri, "username", "token")
     implicit val client: Client[IO] = Client[IO](behavior)
 
-    getOrganizations[IO]("user").value.unsafeRunSync shouldBe Left(NotFound(body))
+    getOrganizations[IO, Json]("user").unsafeRunSync shouldBe Left(NotFound(body))
 
   }
 
@@ -96,7 +102,7 @@ class GitHubServiceTests extends AnyFlatSpec with Matchers {
     implicit val connection: GitHubConnection = GitHubConnection(baseUri, "username", "token")
     implicit val client: Client[IO] = Client[IO](behavior)
 
-    getOrganizations[IO]("user").value.unsafeRunSync shouldBe Left(UnexpectedResponse(400, body, None))
+    getOrganizations[IO, Json]("user").unsafeRunSync shouldBe Left(UnexpectedResponse(400, body, None))
 
   }
 
