@@ -18,4 +18,5 @@ target/
 
 # Local files
 envs.sh
+src/main/resources/application.json
 

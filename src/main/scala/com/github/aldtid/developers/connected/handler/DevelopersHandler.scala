@@ -4,6 +4,7 @@ import com.github.aldtid.developers.connected.model.Developers
 import com.github.aldtid.developers.connected.model.responses.{Connected, Connection, Error, NotConnected}
 import com.github.aldtid.developers.connected.service.github.GitHubService
 import com.github.aldtid.developers.connected.service.github.connection.GitHubConnection
+import com.github.aldtid.developers.connected.service.twitter.TwitterService
 import com.github.aldtid.developers.connected.service.twitter.connection.TwitterConnection
 
 import cats.data.{EitherT, NonEmptyList}
@@ -20,14 +21,16 @@ trait DevelopersHandler[F[_]] {
 object DevelopersHandler {
 
   def checkConnection[F[_] : Concurrent : Client](github: GitHubService[F],
+                                                  twitter: TwitterService[F],
                                                   developers: Developers)
                                                  (implicit ghConnection: GitHubConnection,
                                                   twConnection: TwitterConnection): EitherT[F, NonEmptyList[Error], Connection] =
     EitherT.pure(NotConnected)
 
-  def default[F[_] : Concurrent : Client](github: GitHubService[F])
+  def default[F[_] : Concurrent : Client](github: GitHubService[F],
+                                          twitter: TwitterService[F])
                                          (implicit connection: GitHubConnection,
                                           twConnection: TwitterConnection): DevelopersHandler[F] =
-    (developers: Developers) => DevelopersHandler.checkConnection(github, developers)
+    (developers: Developers) => DevelopersHandler.checkConnection(github, twitter, developers)
 
 }

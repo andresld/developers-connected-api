@@ -13,8 +13,9 @@ import com.github.aldtid.developers.connected.model.responses.{Errors, MissingRe
 import cats.Monad
 import cats.effect.{Clock, Sync}
 import cats.implicits._
-import org.http4s.{HttpApp, Request, Response}
+import org.http4s.{HttpApp, HttpRoutes, Request, Response}
 import org.http4s.dsl.Http4sDsl
+import org.http4s.server.Router
 import org.typelevel.log4cats.Logger
 
 
@@ -25,6 +26,7 @@ object application {
    *
    * Composes all the application routes, logs the requests and responses and processes the incoming requests.
    *
+   * @param basePath API base path
    * @param controller 'developers' endpoints controller
    * @param pl logging instances
    * @tparam F context
@@ -32,13 +34,16 @@ object application {
    * @tparam O body type to encode
    * @return an application that handles every API route
    */
-  def app[F[_] : Sync : Clock : Logger : Http4sDsl, L, O : BodyEncoder](controller: DevelopersHandler[F])
+  def app[F[_] : Sync : Clock : Logger : Http4sDsl, L, O : BodyEncoder](basePath: String,
+                                                                        controller: DevelopersHandler[F])
                                                                        (implicit pl: ProgramLog[L]): HttpApp[F] = {
 
     import pl._
 
-    // Routes composition
-    val process: Function[Request[F], F[Response[F]]] = developers(controller) applyOrElse (_, notFound)
+    val routes: HttpRoutes[F] = Router(basePath -> HttpRoutes.of(developers(controller)))
+
+    val process: Function[Request[F], F[Response[F]]] =
+      request => routes.apply(request).getOrElseF(notFound[F, O].apply(request))
 
     HttpApp[F](request =>
 

@@ -6,6 +6,17 @@ import com.github.aldtid.developers.connected.logging.model.Message
 
 object messages {
 
+  // ---- LAUNCHER -----
+  val loadingConfiguration: Message = "loading configuration".asMessage
+  val configurationLoaded: Message = "configuration loaded".asMessage
+  val configurationErrors: Message = "configuration had errors".asMessage
+  val clientThreadPool: Message = "creating client thread pool".asMessage
+  val serverThreadPool: Message = "creating server thread pool".asMessage
+  val creatingClient: Message = "creating http client".asMessage
+  val githubConnection: Message = "GitHub connection details".asMessage
+  val twitterConnection: Message = "Twitter connection details".asMessage
+  val startingServer: Message = "starting the server".asMessage
+
   // ---- GENERAL ROUTES -----
   val incomingRequest: Message = "incoming request".asMessage
   val outgoingResponse: Message = "outgoing response".asMessage
