@@ -48,7 +48,7 @@ object json {
     )
 
   val jsonConfigReaderFailuresLoggable: Loggable[ConfigReaderFailures, Json] =
-    failures => Json.obj("failures" -> failures.prettyPrint().asJson)
+    failures => Json.obj("failures" -> failures.prettyPrint().filterNot(_ == '\r').asJson)
 
   val jsonMessageLoggable: Loggable[Message, Json] = _.asJson
   val jsonTagLoggable: Loggable[Tag, Json] = _.asJson

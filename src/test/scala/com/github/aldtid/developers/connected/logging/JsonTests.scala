@@ -8,12 +8,17 @@ import com.github.aldtid.developers.connected.service.twitter.{error => terror}
 import com.github.aldtid.developers.connected.service.twitter.response.{Followers, Meta, User, UserData}
 
 import cats.Id
+import com.github.aldtid.developers.connected.configuration.Server
+import com.github.aldtid.developers.connected.service.github.connection.GitHubConnection
+import com.github.aldtid.developers.connected.service.twitter.connection.TwitterConnection
 import io.circe.Json
 import org.http4s.Header.Raw
+import org.http4s.implicits.http4sLiteralsSyntax
 import org.http4s.{Headers, Request, Response}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.typelevel.ci.CIString
+import pureconfig.error.{CannotConvert, ConfigReaderFailures, ConvertFailure}
 
 
 class JsonTests extends AnyFlatSpec with Matchers {
@@ -67,11 +72,25 @@ class JsonTests extends AnyFlatSpec with Matchers {
         )
       )
 
+    jsonProgramLog.configReaderFailuresLoggable
+      .format(ConfigReaderFailures(ConvertFailure(CannotConvert("value", "type", "reason"), None, "key"))) shouldBe
+        Json.obj("failures" -> Json.fromString("at 'key':\n  - Cannot convert 'value' to type: reason."))
+
     jsonProgramLog.messageLoggable.format(Message("test")) shouldBe Json.obj("message" -> Json.fromString("test"))
     jsonProgramLog.tagLoggable.format(Tag("test")) shouldBe Json.obj("tag" -> Json.fromString("test"))
     jsonProgramLog.usernameLoggable.format(Username("test")) shouldBe Json.obj("username" -> Json.fromString("test"))
     jsonProgramLog.identifierLoggable.format(Identifier("test")) shouldBe Json.obj("id" -> Json.fromString("test"))
     jsonProgramLog.latencyLoggable.format(Latency(1)) shouldBe Json.obj("latency" -> Json.fromInt(1))
+    jsonProgramLog.threadPoolLoggable.format(ThreadPool(1)) shouldBe Json.obj("threadPool" -> Json.fromInt(1))
+
+    jsonProgramLog.configurationServerLoggable.format(Server("host", 80, "/root")) shouldBe
+      Json.obj(
+        "server" -> Json.obj(
+          "host" -> Json.fromString("host"),
+          "port" -> Json.fromInt(80),
+          "basePath" -> Json.fromString("/root")
+        )
+      )
 
     jsonProgramLog.twitterUserDataLoggable.format(UserData(User("123", "name", "username"))) shouldBe
       Json.obj(
@@ -124,6 +143,13 @@ class JsonTests extends AnyFlatSpec with Matchers {
         )
       )
 
+    jsonProgramLog.twitterConnectionLoggable.format(TwitterConnection(uri"http://localhost:80", "token")) shouldBe
+      Json.obj(
+        "twitter" -> Json.obj(
+          "uri" -> Json.fromString("http://localhost:80")
+        )
+      )
+
     jsonProgramLog.githubOrganizationsLoggable.format(List(Organization("login", 123))) shouldBe
       Json.obj(
         "organizations" -> Json.arr(
@@ -151,6 +177,14 @@ class JsonTests extends AnyFlatSpec with Matchers {
             "body" -> Json.fromString("body"),
             "error" -> Json.Null,
           )
+        )
+      )
+
+    jsonProgramLog.githubConnectionLoggable.format(GitHubConnection(uri"http://localhost:80", "username", "token")) shouldBe
+      Json.obj(
+        "github" -> Json.obj(
+          "uri" -> Json.fromString("http://localhost:80"),
+          "username" -> Json.fromString("username")
         )
       )
 

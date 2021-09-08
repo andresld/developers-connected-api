@@ -29,7 +29,7 @@ object DevelopersHandler {
 
   def default[F[_] : Concurrent : Client](github: GitHubService[F],
                                           twitter: TwitterService[F])
-                                         (implicit connection: GitHubConnection,
+                                         (implicit ghConnection: GitHubConnection,
                                           twConnection: TwitterConnection): DevelopersHandler[F] =
     (developers: Developers) => DevelopersHandler.checkConnection(github, twitter, developers)
 

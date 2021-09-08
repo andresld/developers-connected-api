@@ -11,7 +11,6 @@ import com.github.aldtid.developers.connected.service.github.GitHubService
 import com.github.aldtid.developers.connected.service.github.connection.GitHubConnection
 import com.github.aldtid.developers.connected.service.twitter.TwitterService
 import com.github.aldtid.developers.connected.service.twitter.connection.TwitterConnection
-
 import cats.effect.{ExitCode, Sync}
 import cats.effect.kernel.Async
 import cats.implicits._
@@ -20,36 +19,38 @@ import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.client.Client
 import org.http4s.dsl.Http4sDsl
 import org.typelevel.log4cats.Logger
+import pureconfig.error.ConfigReaderFailures
 
 import java.util.concurrent.Executors
-
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService}
 
 
 object launcher {
 
   /**
-   * Tries to load a configuration from the file system.
+   * Tries to load a configuration from the file system using passed effect.
    *
    * In case the load succeeds, a function is applied for parsed configuration, otherwise the exit code is a failure.
    * Logs are shown before and after loading the configuration.
    *
-   * @param f function to apply if the load succeeds
+   * @param eitherF effect for configuration load result
+   * @param onSuccess function to apply if the load succeeds
    * @param pl logging instances
    * @tparam F context type
    * @tparam L logging type to format
    * @return the resulting exit code of applying passed function or a failed configuration load
    */
-  def handleConfiguration[F[_] : Sync : Logger, L](f: Configuration => F[ExitCode])
+  def handleConfiguration[F[_] : Sync : Logger, L](eitherF: F[Either[ConfigReaderFailures, Configuration]],
+                                                   onSuccess: Configuration => F[ExitCode])
                                                   (implicit pl: ProgramLog[L]): F[ExitCode] = {
 
     import pl._
 
     val baseLog: Log[L] = launcherTag
 
-    Logger[F].info(baseLog |+| loadingConfiguration) *> loadConfiguration.flatMap({
+    Logger[F].info(baseLog |+| loadingConfiguration) *> eitherF.flatMap({
 
-      case Right(configuration) => Logger[F].info(baseLog |+| configurationLoaded) *> f(configuration)
+      case Right(configuration) => Logger[F].info(baseLog |+| configurationLoaded) *> onSuccess(configuration)
       case Left(errors)         => Logger[F].info(baseLog |+| configurationErrors |+| errors).as(ExitCode.Error)
 
     })
@@ -118,7 +119,7 @@ object launcher {
 
         })
 
-    handleConfiguration(threadPoolsAndRun)
+    handleConfiguration(loadConfiguration, threadPoolsAndRun)
 
   }
 
