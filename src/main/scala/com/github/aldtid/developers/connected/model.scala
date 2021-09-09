@@ -1,5 +1,8 @@
 package com.github.aldtid.developers.connected
 
+import com.github.aldtid.developers.connected.service.github.error.{Error => GError}
+import com.github.aldtid.developers.connected.service.twitter.error.{Error => TError}
+
 import cats.data.NonEmptyList
 
 
@@ -24,8 +27,11 @@ object model {
     }
 
     sealed trait Error
-    final case class InvalidGitHubUser(developer: String) extends Error
-    final case class InvalidTwitterUser(developer: String) extends Error
+    final case class InvalidGitHubUser(username: String) extends Error
+    final case class InvalidTwitterUser(username: String) extends Error
+    final case class InternalGitHubError(username: String, error: GError) extends Error
+    final case class InternalTwitterError(username: String, error: TError) extends Error
+    final case object InterruptedExecution extends Error
     final case object MissingResource extends Error
 
     final case class Errors(errors: NonEmptyList[Error])

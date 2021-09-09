@@ -2,6 +2,7 @@ package com.github.aldtid.developers.connected.logging
 
 import com.github.aldtid.developers.connected.configuration.Server
 import com.github.aldtid.developers.connected.logging.model._
+import com.github.aldtid.developers.connected.model.responses.{Connection, Errors}
 import com.github.aldtid.developers.connected.service.github.connection.GitHubConnection
 import com.github.aldtid.developers.connected.service.github.response._
 import com.github.aldtid.developers.connected.service.github.error.{Error => GError}
@@ -42,8 +43,12 @@ trait ProgramLog[L] {
   implicit val latencyLoggable: Loggable[Latency, L]
   implicit val threadPoolLoggable: Loggable[ThreadPool, L]
 
-  // Configuration model types
+  // Supported configuration model types
   implicit val configurationServerLoggable: Loggable[Server, L]
+
+  // Supported API model types
+  implicit val connectionLoggable: Loggable[Connection, L]
+  implicit val errorsLoggable: Loggable[Errors, L]
 
   // Supported Twitter model types
   implicit val twitterUserDataLoggable: Loggable[UserData, L]

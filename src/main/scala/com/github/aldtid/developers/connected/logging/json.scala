@@ -3,12 +3,14 @@ package com.github.aldtid.developers.connected.logging
 import com.github.aldtid.developers.connected.configuration.Server
 import com.github.aldtid.developers.connected.logging.Log.createLog
 import com.github.aldtid.developers.connected.logging.model._
+import com.github.aldtid.developers.connected.model.responses._
 import com.github.aldtid.developers.connected.service.github.connection.GitHubConnection
 import com.github.aldtid.developers.connected.service.github.response.Organization
 import com.github.aldtid.developers.connected.service.github.{error => gerror}
 import com.github.aldtid.developers.connected.service.twitter.connection.TwitterConnection
 import com.github.aldtid.developers.connected.service.twitter.response.{Followers, UserData}
 import com.github.aldtid.developers.connected.service.twitter.{error => terror}
+
 import io.circe.{Encoder, Json, Printer, Error => CError}
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -60,6 +62,11 @@ object json {
   val jsonConfigurationServerLoggable: Loggable[Server, Json] =
     server => Json.obj("server" -> server.asJson)
 
+  val jsonConnectionLoggable: Loggable[Connection, Json] =
+    connection => Json.obj("connected" -> connection.connection.asJson)
+
+  val jsonErrorsLoggable: Loggable[Errors, Json] = _.asJson
+
   val jsonTwitterUserDataLoggable: Loggable[UserData, Json] =
     data => Json.obj("user" -> data.data.asJson)
 
@@ -67,12 +74,7 @@ object json {
     followers => Json.obj("followers" -> followers.data.asJson, "meta" -> followers.meta.asJson)
 
   val jsonTwitterErrorLoggable: Loggable[terror.Error, Json] =
-    error => wrapError(jsonTwitterError(error))
-
-  val jsonTwitterError: terror.Error => Json = {
-    case error: terror.NotFound => Json.obj("notFound" -> error.asJson)
-    case error: terror.UnexpectedResponse => Json.obj("unexpected" -> error.asJson)
-  }
+    error => wrapError(error.asJson)
 
   val jsonTwitterConnectionLoggable: Loggable[TwitterConnection, Json] =
     connection =>
@@ -86,12 +88,7 @@ object json {
     list => Json.obj("organizations" -> Json.arr(list.map(_.asJson): _*))
 
   val jsonGithubErrorLoggable: Loggable[gerror.Error, Json] =
-    error => wrapError(jsonGithubError(error))
-
-  val jsonGithubError: gerror.Error => Json = {
-    case error: gerror.NotFound => Json.obj("notFound" -> error.asJson)
-    case error: gerror.UnexpectedResponse => Json.obj("unexpected" -> error.asJson)
-  }
+    error => wrapError(error.asJson)
 
   val jsonGithubConnectionLoggable: Loggable[GitHubConnection, Json] =
     connection =>
@@ -134,6 +131,25 @@ object json {
         "trace" -> stackTraceToString(throwable).asJson,
         "cause" -> Option(throwable.getCause).asJson
       )
+
+  implicit val errorEncoder: Encoder[Error] = {
+    case error: InvalidGitHubUser => Json.obj("invalid" -> Json.obj("github" -> error.asJson))
+    case error: InvalidTwitterUser => Json.obj("invalid" -> Json.obj("twitter" -> error.asJson))
+    case error: InternalGitHubError => Json.obj("internal" -> Json.obj("github" -> error.asJson))
+    case error: InternalTwitterError => Json.obj("internal" -> Json.obj("twitter" -> error.asJson))
+    case MissingResource => Json.obj("missing" -> "resource".asJson)
+    case InterruptedExecution => Json.obj("interrupted" -> "execution".asJson)
+  }
+
+  implicit val twitterErrorEncoder: Encoder[terror.Error] = {
+    case error: terror.NotFound => Json.obj("notFound" -> error.asJson)
+    case error: terror.UnexpectedResponse => Json.obj("unexpected" -> error.asJson)
+  }
+
+  implicit val githubErrorEncoder: Encoder[gerror.Error] = {
+    case error: gerror.NotFound => Json.obj("notFound" -> error.asJson)
+    case error: gerror.UnexpectedResponse => Json.obj("unexpected" -> error.asJson)
+  }
   // ----------
 
   implicit val jsonProgramLog: ProgramLog[Json] = new ProgramLog[Json] {
@@ -153,6 +169,9 @@ object json {
     implicit val threadPoolLoggable: Loggable[ThreadPool, Json] = jsonThreadPoolLoggable
 
     implicit val configurationServerLoggable: Loggable[Server, Json] = jsonConfigurationServerLoggable
+
+    implicit val connectionLoggable: Loggable[Connection, Json] = jsonConnectionLoggable
+    implicit val errorsLoggable: Loggable[Errors, Json] = jsonErrorsLoggable
 
     implicit val twitterUserDataLoggable: Loggable[UserData, Json] = jsonTwitterUserDataLoggable
     implicit val twitterFollowersLoggable: Loggable[Followers, Json] = jsonTwitterFollowersLoggable

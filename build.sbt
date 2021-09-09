@@ -30,5 +30,6 @@ lazy val root = (project in file("."))
     scalaVersion         := "2.13.6",
     version              := "0.1.0-SNAPSHOT",
     scalacOptions       ++= compilerOptions,
-    libraryDependencies ++= libDependencies
+    libraryDependencies ++= libDependencies,
+    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full)
   )

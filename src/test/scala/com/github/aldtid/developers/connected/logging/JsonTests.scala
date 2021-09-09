@@ -1,14 +1,15 @@
 package com.github.aldtid.developers.connected.logging
 
-import com.github.aldtid.developers.connected.logging.json.jsonProgramLog
+import com.github.aldtid.developers.connected.logging.json.{errorEncoder, jsonProgramLog}
 import com.github.aldtid.developers.connected.logging.model._
 import com.github.aldtid.developers.connected.service.github.{error => gerror}
 import com.github.aldtid.developers.connected.service.github.response.Organization
 import com.github.aldtid.developers.connected.service.twitter.{error => terror}
 import com.github.aldtid.developers.connected.service.twitter.response.{Followers, Meta, User, UserData}
-
 import cats.Id
+import cats.data.NonEmptyList
 import com.github.aldtid.developers.connected.configuration.Server
+import com.github.aldtid.developers.connected.model.responses._
 import com.github.aldtid.developers.connected.service.github.connection.GitHubConnection
 import com.github.aldtid.developers.connected.service.twitter.connection.TwitterConnection
 import io.circe.Json
@@ -90,6 +91,19 @@ class JsonTests extends AnyFlatSpec with Matchers {
           "port" -> Json.fromInt(80),
           "basePath" -> Json.fromString("/root")
         )
+      )
+
+    jsonProgramLog.connectionLoggable.format(NotConnected) shouldBe Json.obj("connected" -> Json.fromBoolean(false))
+    jsonProgramLog.connectionLoggable.format(Connected(NonEmptyList.one("org"))) shouldBe Json.obj("connected" -> Json.fromBoolean(true))
+
+    jsonProgramLog.errorsLoggable.format(Errors(NonEmptyList.one(MissingResource))) shouldBe
+      Json.obj(
+        "errors" ->
+          Json.arr(
+            Json.obj(
+              "missing" -> Json.fromString("resource")
+            )
+          )
       )
 
     jsonProgramLog.twitterUserDataLoggable.format(UserData(User("123", "name", "username"))) shouldBe
@@ -187,6 +201,59 @@ class JsonTests extends AnyFlatSpec with Matchers {
           "username" -> Json.fromString("username")
         )
       )
+
+  }
+
+  "errorEncoder" should "convert the different error instances as expected" in {
+
+    errorEncoder.apply(InvalidGitHubUser("dev1")) shouldBe
+      Json.obj(
+        "invalid" -> Json.obj(
+          "github" -> Json.obj(
+            "username" -> Json.fromString("dev1")
+          )
+        )
+      )
+
+    errorEncoder.apply(InvalidTwitterUser("dev1")) shouldBe
+      Json.obj(
+        "invalid" -> Json.obj(
+          "twitter" -> Json.obj(
+            "username" -> Json.fromString("dev1")
+          )
+        )
+      )
+
+    errorEncoder.apply(InternalGitHubError("dev1", gerror.NotFound("body"))) shouldBe
+      Json.obj(
+        "internal" -> Json.obj(
+          "github" -> Json.obj(
+            "username" -> Json.fromString("dev1"),
+            "error" -> Json.obj(
+              "notFound" -> Json.obj(
+                "body" -> Json.fromString("body")
+              )
+            )
+          )
+        )
+      )
+
+    errorEncoder.apply(InternalTwitterError("dev1", terror.NotFound("body"))) shouldBe
+      Json.obj(
+        "internal" -> Json.obj(
+          "twitter" -> Json.obj(
+            "username" -> Json.fromString("dev1"),
+            "error" -> Json.obj(
+              "notFound" -> Json.obj(
+                "body" -> Json.fromString("body")
+              )
+            )
+          )
+        )
+      )
+
+    errorEncoder.apply(MissingResource) shouldBe Json.obj("missing" -> Json.fromString("resource"))
+    errorEncoder.apply(InterruptedExecution) shouldBe Json.obj("interrupted" -> Json.fromString("execution"))
 
   }
 

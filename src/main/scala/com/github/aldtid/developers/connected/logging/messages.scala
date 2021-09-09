@@ -21,6 +21,10 @@ object messages {
   val incomingRequest: Message = "incoming request".asMessage
   val outgoingResponse: Message = "outgoing response".asMessage
 
+  // ----- DEVELOPERS HANDLER -----
+  val connectionResult: Message = "connection result".asMessage
+  val connectionErrors: Message = "errors found when checking for connection".asMessage
+
   // ----- TWITTER SERVICE -----
   val twitterUserRequest: Message = "requesting user by username".asMessage
   val twitterUserResponse: Message = "response for requested username".asMessage
