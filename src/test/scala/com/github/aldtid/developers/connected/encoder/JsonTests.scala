@@ -1,7 +1,10 @@
 package com.github.aldtid.developers.connected.encoder
 
 import com.github.aldtid.developers.connected.encoder.json.jsonResponseEncoder
-import com.github.aldtid.developers.connected.model.responses.{Connected, Errors, InvalidGitHubUser, InvalidTwitterUser, MissingResource, NotConnected}
+import com.github.aldtid.developers.connected.model.responses._
+import com.github.aldtid.developers.connected.service.github.{error => gerror}
+import com.github.aldtid.developers.connected.service.twitter.{error => terror}
+
 import cats.Id
 import io.circe.Json
 import org.scalatest.flatspec.AnyFlatSpec
@@ -28,13 +31,24 @@ class JsonTests extends AnyFlatSpec with Matchers {
 
   it should "contain the expected encoder for an Errors instance" in {
 
-    jsonResponseEncoder.errorsEncoder
-      .encode(Errors.of(InvalidGitHubUser("dev1"), InvalidTwitterUser("dev2"), MissingResource)) shouldBe
+    val errors: Errors = Errors.of(
+      InvalidGitHubUser("dev1"),
+      InvalidTwitterUser("dev2"),
+      InternalGitHubError("dev3", gerror.UnexpectedResponse(400, "body", None)),
+      InternalTwitterError("dev4", terror.UnexpectedResponse(400, "body", None)),
+      MissingResource,
+      InterruptedExecution
+    )
+
+    jsonResponseEncoder.errorsEncoder.encode(errors) shouldBe
         Json.obj(
           "errors" -> Json.arr(
             Json.fromString("dev1 is not a valid user in github"),
             Json.fromString("dev2 is not a valid user in twitter"),
-            Json.fromString("missing resource")
+            Json.fromString("internal error with dev3 in github"),
+            Json.fromString("internal error with dev4 in twitter"),
+            Json.fromString("missing resource"),
+            Json.fromString("interrupted execution")
           )
         )
 

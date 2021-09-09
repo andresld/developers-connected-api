@@ -74,12 +74,7 @@ object json {
     followers => Json.obj("followers" -> followers.data.asJson, "meta" -> followers.meta.asJson)
 
   val jsonTwitterErrorLoggable: Loggable[terror.Error, Json] =
-    error => wrapError(jsonTwitterError(error))
-
-  val jsonTwitterError: terror.Error => Json = {
-    case error: terror.NotFound => Json.obj("notFound" -> error.asJson)
-    case error: terror.UnexpectedResponse => Json.obj("unexpected" -> error.asJson)
-  }
+    error => wrapError(error.asJson)
 
   val jsonTwitterConnectionLoggable: Loggable[TwitterConnection, Json] =
     connection =>
@@ -93,12 +88,7 @@ object json {
     list => Json.obj("organizations" -> Json.arr(list.map(_.asJson): _*))
 
   val jsonGithubErrorLoggable: Loggable[gerror.Error, Json] =
-    error => wrapError(jsonGithubError(error))
-
-  val jsonGithubError: gerror.Error => Json = {
-    case error: gerror.NotFound => Json.obj("notFound" -> error.asJson)
-    case error: gerror.UnexpectedResponse => Json.obj("unexpected" -> error.asJson)
-  }
+    error => wrapError(error.asJson)
 
   val jsonGithubConnectionLoggable: Loggable[GitHubConnection, Json] =
     connection =>
@@ -149,6 +139,16 @@ object json {
     case error: InternalTwitterError => Json.obj("internal" -> Json.obj("twitter" -> error.asJson))
     case MissingResource => Json.obj("missing" -> "resource".asJson)
     case InterruptedExecution => Json.obj("interrupted" -> "execution".asJson)
+  }
+
+  implicit val twitterErrorEncoder: Encoder[terror.Error] = {
+    case error: terror.NotFound => Json.obj("notFound" -> error.asJson)
+    case error: terror.UnexpectedResponse => Json.obj("unexpected" -> error.asJson)
+  }
+
+  implicit val githubErrorEncoder: Encoder[gerror.Error] = {
+    case error: gerror.NotFound => Json.obj("notFound" -> error.asJson)
+    case error: gerror.UnexpectedResponse => Json.obj("unexpected" -> error.asJson)
   }
   // ----------
 
