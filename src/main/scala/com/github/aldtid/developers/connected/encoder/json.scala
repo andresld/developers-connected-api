@@ -34,9 +34,12 @@ object json {
     connection => Json.obj("connected" -> connection.connection.asJson)
 
   implicit val jsonErrorCirceEncoder: CEncoder[Error] = {
-    case InvalidGitHubUser(developer) => s"$developer is not a valid user in github".asJson
-    case InvalidTwitterUser(developer) => s"$developer is not a valid user in twitter".asJson
+    case InvalidGitHubUser(username) => s"$username is not a valid user in github".asJson
+    case InvalidTwitterUser(username) => s"$username is not a valid user in twitter".asJson
+    case InternalGitHubError(username, _) => s"internal error with $username in github".asJson
+    case InternalTwitterError(username, _) => s"internal error with $username in twitter".asJson
     case MissingResource => "missing resource".asJson
+    case InterruptedExecution => "interrupted execution".asJson
   }
   // ----------
 

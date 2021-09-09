@@ -8,6 +8,7 @@ object tags {
 
   val launcherTag: Tag = "LAUNCHER".asTag
   val routerTag: Tag = "ROUTER".asTag
+  val developersHandlerTag: Tag = "DEV_HANDLER".asTag
   val githubTag: Tag = "GITHUB".asTag
   val twitterTag: Tag = "TWITTER".asTag
 

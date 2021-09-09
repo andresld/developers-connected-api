@@ -3,8 +3,9 @@ package com.github.aldtid.developers.connected
 import com.github.aldtid.developers.connected.application._
 import com.github.aldtid.developers.connected.encoder.json.jsonResponseEncoder
 import com.github.aldtid.developers.connected.handler.DevelopersHandler
-import com.github.aldtid.developers.connected.model.responses.{Connection, Error, InvalidGitHubUser, NotConnected}
+import com.github.aldtid.developers.connected.model.responses.{Connection, Errors, InvalidGitHubUser, NotConnected}
 import com.github.aldtid.developers.connected.logging.json.jsonProgramLog
+
 import cats.Id
 import cats.data.{EitherT, NonEmptyList}
 import io.circe.Json
@@ -23,8 +24,8 @@ class ApplicationTests extends AnyFlatSpec with Matchers {
     implicit val dsl: Http4sDsl[Id] = new Http4sDsl[Id] {}
 
     val handler: DevelopersHandler[Id] = developers =>
-      if (developers.first == "dev1" && developers.second == "dev2") EitherT.rightT[Id, NonEmptyList[Error]](NotConnected)
-      else EitherT.leftT[Id, Connection](NonEmptyList.one(InvalidGitHubUser(developers.first)))
+      if (developers.first == "dev1" && developers.second == "dev2") EitherT.rightT[Id, Errors](NotConnected)
+      else EitherT.leftT[Id, Connection](Errors(NonEmptyList.one(InvalidGitHubUser(developers.first))))
 
     val body: String = """{"connected":false}"""
     val headers: Headers = Headers(`Content-Type`(MediaType.application.json), `Content-Length`(body.length))
@@ -41,7 +42,7 @@ class ApplicationTests extends AnyFlatSpec with Matchers {
     implicit val dsl: Http4sDsl[Id] = new Http4sDsl[Id] {}
 
     val handler: DevelopersHandler[Id] = developers =>
-      EitherT.leftT[Id, Connection](NonEmptyList.one(InvalidGitHubUser(developers.first)))
+      EitherT.leftT[Id, Connection](Errors(NonEmptyList.one(InvalidGitHubUser(developers.first))))
 
     val body: String = """{"errors":["dev1 is not a valid user in github"]}"""
     val headers: Headers = Headers(`Content-Type`(MediaType.application.json), `Content-Length`(body.length))

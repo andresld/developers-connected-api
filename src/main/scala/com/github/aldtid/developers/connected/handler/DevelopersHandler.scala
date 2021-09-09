@@ -1,6 +1,9 @@
 package com.github.aldtid.developers.connected.handler
 
 import com.github.aldtid.developers.connected.logging.ProgramLog
+import com.github.aldtid.developers.connected.logging.implicits.all._
+import com.github.aldtid.developers.connected.logging.messages.{connectionErrors, connectionResult}
+import com.github.aldtid.developers.connected.logging.tags.developersHandlerTag
 import com.github.aldtid.developers.connected.model.Developers
 import com.github.aldtid.developers.connected.model.responses._
 import com.github.aldtid.developers.connected.service.github.GitHubService
@@ -22,7 +25,7 @@ import org.typelevel.log4cats.Logger
 
 trait DevelopersHandler[F[_]] {
 
-  def checkConnection(developers: Developers): EitherT[F, NonEmptyList[Error], Connection]
+  def checkConnection(developers: Developers): EitherT[F, Errors, Connection]
 
 }
 
@@ -31,7 +34,7 @@ object DevelopersHandler {
   type OutEither[F[_], A] = Outcome[EitherT[F, NonEmptyList[Error], *], Throwable, A]
 
   def embed[F[_] : Concurrent, A](out: OutEither[F, A]): EitherT[F, NonEmptyList[Error], A] =
-    out.embed(EitherT.leftT(NonEmptyList.one(InternalError)))
+    out.embed(EitherT.leftT(NonEmptyList.one(InterruptedExecution)))
 
   def join[F[_] : Concurrent, A1, A2]: ((OutEither[F, A1], OutEither[F, A2])) => EitherT[F, NonEmptyList[Error], (A1, A2)] = {
 
@@ -56,7 +59,7 @@ object DevelopersHandler {
       .flatMap(user => twitter.getUserFollowers(user.data.id))
       .leftMap({
         case terror.NotFound(_) => InvalidTwitterUser(username)
-        case _ => InternalError
+        case error => InternalTwitterError(username, error)
       })
       .leftMap(NonEmptyList.one)
 
@@ -67,7 +70,7 @@ object DevelopersHandler {
     github.getOrganizations(username)
       .leftMap({
         case gerror.NotFound(_) => InvalidGitHubUser(username)
-        case _ => InternalError
+        case error => InternalGitHubError(username, error)
       })
       .leftMap(NonEmptyList.one)
 
@@ -76,7 +79,9 @@ object DevelopersHandler {
                                                                       developers: Developers)
                                                                      (implicit pl: ProgramLog[L],
                                                                       ghConnection: GitHubConnection,
-                                                                      twConnection: TwitterConnection): EitherT[F, NonEmptyList[Error], Connection] = {
+                                                                      twConnection: TwitterConnection): EitherT[F, Errors, Connection] = {
+
+    import pl._
 
     val parallelOrganizations: EitherT[F, NonEmptyList[Error], List[Organization]] =
       parallel[F, List[Organization], List[Organization], List[Organization]](
@@ -99,6 +104,9 @@ object DevelopersHandler {
         if (orgs.isEmpty || users.isEmpty) NotConnected
         else Connected(NonEmptyList.fromListUnsafe(orgs.map(_.login)))
     )
+      .leftMap(Errors(_))
+      .semiflatTap(connection => Logger[F].info(connectionResult |+| connection |+| developersHandlerTag))
+      .leftSemiflatTap(errors => Logger[F].error(connectionErrors |+| errors |+| developersHandlerTag))
 
   }
 
