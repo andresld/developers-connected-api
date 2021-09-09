@@ -112,7 +112,7 @@ object launcher {
             _          <- Logger[F].info(baseLog |+| githubConnection |+| ghConnection)
             _          <- Logger[F].info(baseLog |+| twitterConnection |+| twConnection)
             _          <- Logger[F].info(baseLog |+| startingServer |+| server)
-            devHandler  = DevelopersHandler.default[F](GitHubService.default, TwitterService.default)
+            devHandler  = DevelopersHandler.default[F, L](GitHubService.default, TwitterService.default)
             code       <- start[F, L, O](serverEC, server, devHandler)
 
           } yield code

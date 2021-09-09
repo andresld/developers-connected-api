@@ -27,6 +27,7 @@ object model {
     final case class InvalidGitHubUser(developer: String) extends Error
     final case class InvalidTwitterUser(developer: String) extends Error
     final case object MissingResource extends Error
+    final case object InternalError extends Error
 
     final case class Errors(errors: NonEmptyList[Error])
 
