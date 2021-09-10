@@ -3,7 +3,7 @@ package com.github.aldtid.developers.connected.service.github
 import com.github.aldtid.developers.connected.logging.json.jsonProgramLog
 import com.github.aldtid.developers.connected.service.github.GitHubService._
 import com.github.aldtid.developers.connected.service.github.connection.GitHubConnection
-import com.github.aldtid.developers.connected.service.github.error.{NotFound, UnexpectedResponse}
+import com.github.aldtid.developers.connected.service.github.error._
 import com.github.aldtid.developers.connected.service.github.response.Organization
 
 import cats.effect.{IO, Resource}
@@ -49,6 +49,33 @@ class GitHubServiceTests extends AnyFlatSpec with Matchers {
     implicit val client: Client[IO] = Client[IO](behavior)
 
     getOrganizations[IO, Json]("user").unsafeRunSync() shouldBe Right(List(Organization("organization", 123)))
+
+  }
+
+  it should "handle an Unauthorized response as expected" in {
+
+    val baseUri: Uri = Uri() / "root"
+
+    val expectedUri: Uri = Uri.unsafeFromString("/root/users/user/orgs")
+    val expectedHeaders: Headers = Headers(Raw(CIString("Authorization"), "Basic dXNlcm5hbWU6dG9rZW4="))
+
+    val body: String = """{"message":"Unauthorized","documentation_url":"url"}"""
+    val response: Response[IO] = Response(Status.Unauthorized, body = Stream.iterable(body.getBytes))
+
+    def behavior(request: Request[IO]): Resource[IO, Response[IO]] = {
+
+      request.method shouldBe Method.GET
+      request.uri shouldBe expectedUri
+      request.headers shouldBe expectedHeaders
+
+      Resource.pure(response)
+
+    }
+
+    implicit val connection: GitHubConnection = GitHubConnection(baseUri, "username", "token")
+    implicit val client: Client[IO] = Client[IO](behavior)
+
+    getOrganizations[IO, Json]("user").unsafeRunSync() shouldBe Left(Unauthorized(body))
 
   }
 

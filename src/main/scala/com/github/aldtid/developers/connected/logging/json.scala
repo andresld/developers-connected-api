@@ -68,10 +68,25 @@ object json {
   val jsonErrorsLoggable: Loggable[Errors, Json] = _.asJson
 
   val jsonTwitterUserDataLoggable: Loggable[UserData, Json] =
-    data => Json.obj("user" -> data.data.asJson)
+    data =>
+      Json.obj(
+        "user" -> Json.obj(
+          "data" -> data.data.asJson,
+          // Convert the errors to strings and add them to the object as a list
+          "errors" -> data.errors.map(_.map(_.printWith(Printer.noSpaces).asJson)).asJson
+        )
+      )
 
   val jsonTwitterFollowersLoggable: Loggable[Followers, Json] =
-    followers => Json.obj("followers" -> followers.data.asJson, "meta" -> followers.meta.asJson)
+    followers =>
+      Json.obj(
+        "followers" -> Json.obj(
+          "data" -> followers.data.asJson,
+          "meta" -> followers.meta.asJson,
+          // Convert the errors to strings and add them to the object as a list
+          "errors" -> followers.errors.map(_.map(_.printWith(Printer.noSpaces).asJson)).asJson
+        )
+      )
 
   val jsonTwitterErrorLoggable: Loggable[terror.Error, Json] =
     error => wrapError(error.asJson)
@@ -142,11 +157,13 @@ object json {
   }
 
   implicit val twitterErrorEncoder: Encoder[terror.Error] = {
-    case error: terror.NotFound => Json.obj("notFound" -> error.asJson)
+    case error: terror.BadRequest => Json.obj("badRequest" -> error.asJson)
+    case error: terror.Unauthorized => Json.obj("unauthorized" -> error.asJson)
     case error: terror.UnexpectedResponse => Json.obj("unexpected" -> error.asJson)
   }
 
   implicit val githubErrorEncoder: Encoder[gerror.Error] = {
+    case error: gerror.Unauthorized => Json.obj("unauthorized" -> error.asJson)
     case error: gerror.NotFound => Json.obj("notFound" -> error.asJson)
     case error: gerror.UnexpectedResponse => Json.obj("unexpected" -> error.asJson)
   }

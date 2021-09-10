@@ -106,41 +106,59 @@ class JsonTests extends AnyFlatSpec with Matchers {
           )
       )
 
-    jsonProgramLog.twitterUserDataLoggable.format(UserData(User("123", "name", "username"))) shouldBe
+    jsonProgramLog.twitterUserDataLoggable.format(UserData(Some(User("123", "name", "username")), None)) shouldBe
       Json.obj(
         "user" -> Json.obj(
-          "id" -> Json.fromString("123"),
-          "name" -> Json.fromString("name"),
-          "username" -> Json.fromString("username")
-        )
-      )
-
-    jsonProgramLog.twitterFollowersLoggable.format(Followers(Some(List(User("123", "name", "username"))), Meta(1))) shouldBe
-      Json.obj(
-        "followers" -> Json.arr(
-          Json.obj(
+          "data" -> Json.obj(
             "id" -> Json.fromString("123"),
             "name" -> Json.fromString("name"),
             "username" -> Json.fromString("username")
-          )
-        ),
-        "meta" -> Json.obj(
-          "resultCount" -> Json.fromInt(1)
+          ),
+          "errors" -> Json.Null
         )
       )
 
-    jsonProgramLog.twitterFollowersLoggable.format(Followers(None, Meta(1))) shouldBe
+    jsonProgramLog.twitterFollowersLoggable.format(Followers(Some(List(User("123", "name", "username"))), Some(Meta(1)), None)) shouldBe
       Json.obj(
-        "followers" -> Json.Null,
-        "meta" -> Json.obj(
-          "resultCount" -> Json.fromInt(1)
+        "followers" -> Json.obj(
+          "data" -> Json.arr(
+            Json.obj(
+              "id" -> Json.fromString("123"),
+              "name" -> Json.fromString("name"),
+              "username" -> Json.fromString("username")
+            )
+          ),
+          "meta" -> Json.obj(
+            "resultCount" -> Json.fromInt(1)
+          ),
+          "errors" -> Json.Null
         )
       )
 
-    jsonProgramLog.twitterErrorLoggable.format(terror.NotFound("body")) shouldBe
+    jsonProgramLog.twitterFollowersLoggable.format(Followers(None, Some(Meta(1)), None)) shouldBe
+      Json.obj(
+        "followers" -> Json.obj(
+          "data" -> Json.Null,
+          "meta" -> Json.obj(
+            "resultCount" -> Json.fromInt(1)
+          ),
+          "errors" -> Json.Null
+        )
+      )
+
+    jsonProgramLog.twitterErrorLoggable.format(terror.BadRequest("body")) shouldBe
       Json.obj(
         "error" -> Json.obj(
-          "notFound" -> Json.obj(
+          "badRequest" -> Json.obj(
+            "body" -> Json.fromString("body")
+          )
+        )
+      )
+
+    jsonProgramLog.twitterErrorLoggable.format(terror.Unauthorized("body")) shouldBe
+      Json.obj(
+        "error" -> Json.obj(
+          "unauthorized" -> Json.obj(
             "body" -> Json.fromString("body")
           )
         )
@@ -170,6 +188,15 @@ class JsonTests extends AnyFlatSpec with Matchers {
           Json.obj(
             "login" -> Json.fromString("login"),
             "id" -> Json.fromInt(123)
+          )
+        )
+      )
+
+    jsonProgramLog.githubErrorLoggable.format(gerror.Unauthorized("body")) shouldBe
+      Json.obj(
+        "error" -> Json.obj(
+          "unauthorized" -> Json.obj(
+            "body" -> Json.fromString("body")
           )
         )
       )
@@ -238,13 +265,13 @@ class JsonTests extends AnyFlatSpec with Matchers {
         )
       )
 
-    errorEncoder.apply(InternalTwitterError("dev1", terror.NotFound("body"))) shouldBe
+    errorEncoder.apply(InternalTwitterError("dev1", terror.BadRequest("body"))) shouldBe
       Json.obj(
         "internal" -> Json.obj(
           "twitter" -> Json.obj(
             "username" -> Json.fromString("dev1"),
             "error" -> Json.obj(
-              "notFound" -> Json.obj(
+              "badRequest" -> Json.obj(
                 "body" -> Json.fromString("body")
               )
             )

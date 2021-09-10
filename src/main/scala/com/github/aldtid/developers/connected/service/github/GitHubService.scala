@@ -87,9 +87,10 @@ object GitHubService {
     val baseLog: Log[L] = username.asUsername |+| githubTag
 
     val handle: Response[F] => F[Either[Error, List[Organization]]] = {
-      case Status.Successful(response) => bodyAs[F, List[Organization]](response).map(identity)
-      case Status.NotFound(response)   => util.bodyAs(response, (_, body) => Left(NotFound(body)))
-      case response                    => util.bodyAs(response, (s, b) => Left(UnexpectedResponse(s, b, None)))
+      case Status.Successful(response)   => bodyAs[F, List[Organization]](response).map(identity)
+      case Status.NotFound(response)     => util.bodyAs(response, (_, body) => Left(NotFound(body)))
+      case Status.Unauthorized(response) => util.bodyAs(response, (_, body) => Left(Unauthorized(body)))
+      case response                      => util.bodyAs(response, (s, b) => Left(UnexpectedResponse(s, b, None)))
     }
 
     util.requestWithLogs(request, baseLog |+| githubOrganizationsRequest, baseLog |+| githubOrganizationsResponse, handle)

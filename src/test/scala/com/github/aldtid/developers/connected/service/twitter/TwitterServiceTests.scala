@@ -3,7 +3,7 @@ package com.github.aldtid.developers.connected.service.twitter
 import com.github.aldtid.developers.connected.logging.json.jsonProgramLog
 import com.github.aldtid.developers.connected.service.twitter.TwitterService._
 import com.github.aldtid.developers.connected.service.twitter.connection.TwitterConnection
-import com.github.aldtid.developers.connected.service.twitter.error.{NotFound, UnexpectedResponse}
+import com.github.aldtid.developers.connected.service.twitter.error._
 import com.github.aldtid.developers.connected.service.twitter.response._
 
 import cats.effect.{IO, Resource}
@@ -48,11 +48,12 @@ class TwitterServiceTests extends AnyFlatSpec with Matchers {
     implicit val connection: TwitterConnection = TwitterConnection(baseUri, "token")
     implicit val client: Client[IO] = Client[IO](behavior)
 
-    getUserByUsername[IO, Json]("user").unsafeRunSync() shouldBe Right(UserData(User("123","user-name", "user-username")))
+    getUserByUsername[IO, Json]("user").unsafeRunSync() shouldBe
+      Right(UserData(Some(User("123","user-name", "user-username")), None))
 
   }
 
-  it should "handle a NotFound response as expected" in {
+  it should "handle a BadRequest response as expected" in {
 
     val baseUri: Uri = Uri() / "root"
 
@@ -60,33 +61,6 @@ class TwitterServiceTests extends AnyFlatSpec with Matchers {
     val expectedHeaders: Headers = Headers(Raw(CIString("Authorization"), "Bearer token"))
 
     val body: String = """{"error":"some error"}"""
-    val response: Response[IO] = Response(Status.NotFound, body = Stream.iterable(body.getBytes))
-
-    def behavior(request: Request[IO]): Resource[IO, Response[IO]] = {
-
-      request.method shouldBe Method.GET
-      request.uri shouldBe expectedUri
-      request.headers shouldBe expectedHeaders
-
-      Resource.pure(response)
-
-    }
-
-    implicit val connection: TwitterConnection = TwitterConnection(baseUri, "token")
-    implicit val client: Client[IO] = Client[IO](behavior)
-
-    getUserByUsername[IO, Json]("user").unsafeRunSync() shouldBe Left(NotFound(body))
-
-  }
-
-  it should "handle an unexpected response as expected" in {
-
-    val baseUri: Uri = Uri() / "root"
-
-    val expectedUri: Uri = Uri.unsafeFromString("/root/users/by/username/user")
-    val expectedHeaders: Headers = Headers(Raw(CIString("Authorization"), "Bearer token"))
-
-    val body: String = """{error":"some error"}"""
     val response: Response[IO] = Response(Status.BadRequest, body = Stream.iterable(body.getBytes))
 
     def behavior(request: Request[IO]): Resource[IO, Response[IO]] = {
@@ -102,7 +76,61 @@ class TwitterServiceTests extends AnyFlatSpec with Matchers {
     implicit val connection: TwitterConnection = TwitterConnection(baseUri, "token")
     implicit val client: Client[IO] = Client[IO](behavior)
 
-    getUserByUsername[IO, Json]("user").unsafeRunSync() shouldBe Left(UnexpectedResponse(400, body, None))
+    getUserByUsername[IO, Json]("user").unsafeRunSync() shouldBe Left(BadRequest(body))
+
+  }
+
+  it should "handle an Unauthorized response as expected" in {
+
+    val baseUri: Uri = Uri() / "root"
+
+    val expectedUri: Uri = Uri.unsafeFromString("/root/users/by/username/user")
+    val expectedHeaders: Headers = Headers(Raw(CIString("Authorization"), "Bearer token"))
+
+    val body: String = """{"error":"some error"}"""
+    val response: Response[IO] = Response(Status.Unauthorized, body = Stream.iterable(body.getBytes))
+
+    def behavior(request: Request[IO]): Resource[IO, Response[IO]] = {
+
+      request.method shouldBe Method.GET
+      request.uri shouldBe expectedUri
+      request.headers shouldBe expectedHeaders
+
+      Resource.pure(response)
+
+    }
+
+    implicit val connection: TwitterConnection = TwitterConnection(baseUri, "token")
+    implicit val client: Client[IO] = Client[IO](behavior)
+
+    getUserByUsername[IO, Json]("user").unsafeRunSync() shouldBe Left(Unauthorized(body))
+
+  }
+
+  it should "handle an unexpected response as expected" in {
+
+    val baseUri: Uri = Uri() / "root"
+
+    val expectedUri: Uri = Uri.unsafeFromString("/root/users/by/username/user")
+    val expectedHeaders: Headers = Headers(Raw(CIString("Authorization"), "Bearer token"))
+
+    val body: String = """{error":"some error"}"""
+    val response: Response[IO] = Response(Status.Forbidden, body = Stream.iterable(body.getBytes))
+
+    def behavior(request: Request[IO]): Resource[IO, Response[IO]] = {
+
+      request.method shouldBe Method.GET
+      request.uri shouldBe expectedUri
+      request.headers shouldBe expectedHeaders
+
+      Resource.pure(response)
+
+    }
+
+    implicit val connection: TwitterConnection = TwitterConnection(baseUri, "token")
+    implicit val client: Client[IO] = Client[IO](behavior)
+
+    getUserByUsername[IO, Json]("user").unsafeRunSync() shouldBe Left(UnexpectedResponse(403, body, None))
 
   }
 
@@ -130,7 +158,7 @@ class TwitterServiceTests extends AnyFlatSpec with Matchers {
     implicit val client: Client[IO] = Client[IO](behavior)
 
     getUserFollowers[IO, Json]("user").unsafeRunSync() shouldBe
-      Right(Followers(Some(List(User("123","user-name", "user-username"))), Meta(1)))
+      Right(Followers(Some(List(User("123","user-name", "user-username"))), Some(Meta(1)), None))
 
   }
 
@@ -166,7 +194,8 @@ class TwitterServiceTests extends AnyFlatSpec with Matchers {
     val body: String = """{"data":{"id":"123","name":"user-name","username":"user-username"}}"""
     val response: Response[IO] = Response(Status.Ok, body = Stream.iterable(body.getBytes))
 
-    bodyAs[IO, UserData](response).unsafeRunSync() shouldBe Right(UserData(User("123", "user-name", "user-username")))
+    bodyAs[IO, UserData](response).unsafeRunSync() shouldBe
+      Right(UserData(Some(User("123", "user-name", "user-username")), None))
 
   }
 

@@ -61,8 +61,8 @@ trait TwitterService[F[_]] {
   /**
    * Retrieves the followers for passed identifier.
    *
-   * In case an error happens during the retrieve, then it is returned as a Left. If the returned response is not an
-   * error that means that passed user exists.
+   * In case an error happens during the retrieve, then it is returned as a Left. Only in case the
+   * returned user option is not empty it is possible to assure the existence of the user.
    *
    * Request, response and function result are logged.
    *
@@ -113,9 +113,10 @@ object TwitterService {
     val baseLog: Log[L] = username.asUsername |+| twitterTag
 
     val handle: Response[F] => F[Either[Error, UserData]] = {
-      case Status.Successful(response) => bodyAs[F, UserData](response).map(identity)
-      case Status.NotFound(response)   => util.bodyAs(response, (_, body) => Left(NotFound(body)))
-      case response                    => util.bodyAs(response, (s, b) => Left(UnexpectedResponse(s, b, None)))
+      case Status.Successful(response)   => bodyAs[F, UserData](response).map(identity)
+      case Status.BadRequest(response)   => util.bodyAs(response, (_, body) => Left(BadRequest(body)))
+      case Status.Unauthorized(response) => util.bodyAs(response, (_, body) => Left(Unauthorized(body)))
+      case response                      => util.bodyAs(response, (s, b) => Left(UnexpectedResponse(s, b, None)))
     }
 
     util.requestWithLogs(request, baseLog |+| twitterUserRequest, baseLog |+| twitterUserResponse, handle)
