@@ -46,7 +46,7 @@ NOTE: Kibana can be accessed at http://localhost:5601
 
 It is possible to perform requests to the API using the `Postman` collection and environment present at `postman/` directory, it is only required to import them both.
 
-On the other hand, another example request can be performed via `curl`:
+Requests can also be performed via `curl`:
 
 [source,bash]
 curl http://localhost:8080/developers/connected/dev1/dev2
