@@ -1,7 +1,7 @@
 package com.github.aldtid.developers.connected.util
 
 import cats.Monad
-import cats.effect.Ref
+import cats.effect.{Ref, Sync}
 import cats.effect.kernel.Clock
 import cats.implicits._
 
@@ -109,6 +109,8 @@ object TempCache {
                                          current: FiniteDuration,
                                          cache: Cache[F, K, V]): F[Option[V]] =
       if (current > value.until) cache.update(_ - key).map(_ => None) else Monad[F].pure(Some(value.value))
+
+  def createCache[F[_] : Sync, K, V]: F[Cache[F, K, V]] = Ref.of(Map[K, CacheValue[V]]())
 
   /**
    * Default implementation for a temporal cache, based on a reference containing a Map.

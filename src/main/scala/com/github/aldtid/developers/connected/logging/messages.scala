@@ -24,6 +24,10 @@ object messages {
   // ----- DEVELOPERS HANDLER -----
   val connectionResult: Message = "connection result".asMessage
   val connectionErrors: Message = "errors found when checking for connection".asMessage
+  val retrieveOrgsCache: Message = "retrieving value from organizations cache".asMessage
+  val evalOrgsCache: Message = "evaluating value to update organizations cache".asMessage
+  val retrieveUsersCache: Message = "retrieving value from users cache".asMessage
+  val evalUsersCache: Message = "evaluating value to update users cache".asMessage
 
   // ----- TWITTER SERVICE -----
   val twitterUserRequest: Message = "requesting user by username".asMessage
