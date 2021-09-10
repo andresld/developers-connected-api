@@ -123,6 +123,8 @@ object DevelopersHandler {
         case error                => InternalTwitterError(username, error)
       })
       .flatMap(
+        // In case the user data does not exist, we can assume that the user does not exist (as that
+        // user cannot be requested with current credentials)
         _.data.fold[EitherT[F, Error, Followers]](EitherT.leftT(InvalidTwitterUser(username)))(data =>
           twitter.getUserFollowers(data.id).leftMap(InternalTwitterError(username, _))
         )
@@ -199,6 +201,8 @@ object DevelopersHandler {
       parallel[F, Followers, Followers, List[User]](
         getFollowers(developers.first, twitter).leftMap(NonEmptyList.one),
         getFollowers(developers.second, twitter).leftMap(NonEmptyList.one),
+        // In case the followers list does not exist, we can assume that the user has no followers
+        // (as does followers cannot be requested with current credentials)
         (fol1, fol2) => fol1.data.zip(fol2.data).map(tuple => tuple._1.filter(tuple._2.contains)).getOrElse(Nil)
       )
 
