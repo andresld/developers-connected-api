@@ -34,10 +34,14 @@ lazy val root = (project in file("."))
     libraryDependencies ++= libDependencies,
     // Docker definitions
     Docker / packageName                 := "developers-connected-api",
-    Docker / defaultLinuxInstallLocation := s"/developers/connected/api",
+    Docker / defaultLinuxInstallLocation := "/opt/developers-connected-api",
     dockerBaseImage                      := "openjdk:11-jdk-slim",
     dockerLabels                         := Map("version" -> version.value),
     dockerExposedPorts                   += 8080,
+    dockerExposedVolumes                 := Seq(
+      "/opt/developers-connected-api/config",
+      "/opt/developers-connected-api/log"
+    ),
     // Plugins definitions
     addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full)
   )

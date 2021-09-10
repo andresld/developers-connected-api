@@ -3,11 +3,24 @@
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <withJansi>true</withJansi>
         <encoder>
-            <pattern>{"date":"%d{yyyy-MM-dd_HH:mm:ss.SSS}", "thread": "%thread", "level": "%-5level", "msg": %msg}%n</pattern>
+            <pattern>{"date":"%d{yyyy-MM-dd'T'HH:mm:ss.SSS}Z", "thread": "%thread", "level": "%-5level", "data": %msg}%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>/opt/developers-connected-api/log/api.log</file>
+        <append>true</append>
+        <immediateFlush>true</immediateFlush>
+        <encoder>
+            <pattern>{"date":"%d{yyyy-MM-dd'T'HH:mm:ss.SSS}Z", "thread": "%thread", "level": "%-5level", "data": %msg}%n</pattern>
         </encoder>
     </appender>
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT" />
     </root>
+
+    <logger name="com.github.aldtid" level="DEBUG">
+        <appender-ref ref="FILE" />
+    </logger>
 </configuration>
