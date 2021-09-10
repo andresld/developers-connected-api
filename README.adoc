@@ -1,0 +1,43 @@
+= Developers Connected API
+:toc:
+:toclevels: 5
+
+== Running the tests
+
+NOTE: Base location is assumed to be the project directory.
+
+To run API tests it is only required to execute the next command:
+
+[source,bash]
+sbt test
+
+== Running the API
+
+NOTE: Base location is assumed to be the project directory.
+
+To run the API it is required to follow next steps:
+
+. Package the API in a Docker container running:
++
+[source,bash]
+sbt docker:publishLocal
+
+. Move to `dc` directory:
+[source,bash]
+cd dc
+
+. Create an `.env` file with following structure:
++
+[source]
+GITHUB_TOKEN=<your-github-token>
+TWITTER_TOKEN=<your-twitter-token>
++
+Please, remember to **REPLACE** the default values.
+
+. Get the environment up with:
+[source,bash]
+docker-compose up -d
+
+That's it! Your API should be running, and the logs should be getting injected into the Elasticsearch via Logstash to be searched via Kibana.
+
+NOTE: Kibana can be accessed at http://localhost:5601
