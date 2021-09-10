@@ -25,11 +25,22 @@ val libDependencies: Seq[ModuleID] =
 
 lazy val root = (project in file("."))
   .settings(
+    // Base definitions
     organization         := "com.github.aldtid",
     name                 := "developers-connected-api",
     scalaVersion         := "2.13.6",
     version              := "0.1.0-SNAPSHOT",
     scalacOptions       ++= compilerOptions,
     libraryDependencies ++= libDependencies,
+    // Docker definitions
+    Docker / packageName                 := "developers-connected-api",
+    Docker / defaultLinuxInstallLocation := s"/developers/connected/api",
+    dockerBaseImage                      := "openjdk:11-jdk-slim",
+    dockerLabels                         := Map("version" -> version.value),
+    dockerExposedPorts                   += 8080,
+    // Plugins definitions
     addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full)
   )
+
+enablePlugins(JavaAppPackaging)
+enablePlugins(DockerPlugin)

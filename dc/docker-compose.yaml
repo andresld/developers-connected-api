@@ -1,0 +1,49 @@
+version: '2.3'
+services:
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.14.1
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=es-docker-cluster
+      - cluster.initial_master_nodes=elasticsearch
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.14.1
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearch
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:7.14.1
+    user: root
+    environment:
+      - ELASTICSEARCH_HOST=elasticsearch
+      - KIBANA_HOST=kibana
+    volumes:
+      - ./files/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers/:/var/lib/docker/containers/:ro
+    command:
+      - "--strict.perms=false"
+    depends_on:
+      - elasticsearch
+      - kibana
+
+  api:
+    image: developers-connected-api:${VERSION:-0.1.0-SNAPSHOT}
+    environment:
+      JAVA_OPTS: "-Dconfig.file=/opt/developers/connected/api/config/application.json -Dlogback.configurationFile=file:/opt/developers/connected/api/config/logback.xml"
+    volumes:
+      - ./files/api:/opt/developers/connected/api/config
+    ports:
+      - 8080:8080
