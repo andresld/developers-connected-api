@@ -110,6 +110,14 @@ object TempCache {
                                          cache: Cache[F, K, V]): F[Option[V]] =
       if (current > value.until) cache.update(_ - key).map(_ => None) else Monad[F].pure(Some(value.value))
 
+  /**
+   * Utility function to create the cache required by default implementation.
+   *
+   * @tparam F context type
+   * @tparam K cache key type
+   * @tparam V cache value type
+   * @return a new internal cache
+   */
   def createCache[F[_] : Sync, K, V]: F[Cache[F, K, V]] = Ref.of(Map[K, CacheValue[V]]())
 
   /**

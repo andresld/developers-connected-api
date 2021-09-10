@@ -16,5 +16,8 @@
   "thread-pools": {
     "client": 10,
     "server": 10
+  },
+  "cache": {
+    "timeout-seconds": 60
   }
 }

@@ -18,7 +18,8 @@ class ConfigurationTests extends AnyFlatSpec with Matchers {
           Server("localhost", 8080, "/"),
           GitHub(uri"http://localhost:12345", "developer", "github-token"),
           Twitter(uri"http://localhost:23456", "twitter-token"),
-          ThreadPools(10, 10)
+          ThreadPools(10, 10),
+          Cache(60)
         )
       )
 
