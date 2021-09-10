@@ -1,0 +1,40 @@
+{
+	"info": {
+		"_postman_id": "7807093d-4749-472b-a7fa-bf7e626a973e",
+		"name": "Developers Connected API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get connection",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{host}}/developers/connected/:dev1/:dev2",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"developers",
+						"connected",
+						":dev1",
+						":dev2"
+					],
+					"variable": [
+						{
+							"key": "dev1",
+							"value": ""
+						},
+						{
+							"key": "dev2",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"protocolProfileBehavior": {}
+}

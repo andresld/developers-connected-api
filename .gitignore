@@ -20,3 +20,5 @@ target/
 envs.sh
 src/main/resources/application.json
 
+# Docker compose
+dc/.env

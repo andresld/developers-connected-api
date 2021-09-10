@@ -1,0 +1,14 @@
+{
+	"id": "186ae31a-3bf8-418e-a5e9-9a2a5bc7e5b4",
+	"name": "Developers Connected API Environment",
+	"values": [
+		{
+			"key": "host",
+			"value": "http://localhost:8080",
+			"enabled": true
+		}
+	],
+	"_postman_variable_scope": "environment",
+	"_postman_exported_at": "2021-09-10T14:11:01.263Z",
+	"_postman_exported_using": "Postman/7.31.1"
+}
