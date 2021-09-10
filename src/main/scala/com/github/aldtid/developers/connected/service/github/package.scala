@@ -23,6 +23,7 @@ package object github {
 
     sealed trait Error
     final case class NotFound(body: String) extends Error
+    final case class Unauthorized(body: String) extends Error
     final case class UnexpectedResponse(status: Int, body: String, error: Option[CError]) extends Error
 
   }

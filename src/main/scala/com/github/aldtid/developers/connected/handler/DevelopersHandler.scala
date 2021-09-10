@@ -118,11 +118,15 @@ object DevelopersHandler {
                    L : ProgramLog](username: String, twitter: TwitterService[F])
                                   (implicit twConnection: TwitterConnection): EitherT[F, Error, Followers] =
     twitter.getUserByUsername(username)
-      .flatMap(user => twitter.getUserFollowers(user.data.id))
       .leftMap({
-        case terror.NotFound(_) => InvalidTwitterUser(username)
-        case error => InternalTwitterError(username, error)
+        case terror.BadRequest(_) => InvalidTwitterUser(username)
+        case error                => InternalTwitterError(username, error)
       })
+      .flatMap(
+        _.data.fold[EitherT[F, Error, Followers]](EitherT.leftT(InvalidTwitterUser(username)))(data =>
+          twitter.getUserFollowers(data.id).leftMap(InternalTwitterError(username, _))
+        )
+      )
 
   /**
    * Defines the organizations retrieve for a GitHub username.
@@ -142,7 +146,7 @@ object DevelopersHandler {
     github.getOrganizations(username)
       .leftMap({
         case gerror.NotFound(_) => InvalidGitHubUser(username)
-        case error => InternalGitHubError(username, error)
+        case error              => InternalGitHubError(username, error)
       })
 
   /**
