@@ -12,7 +12,7 @@ object configuration {
 
   import implicits._
 
-  final case class Configuration(server: Server, github: GitHub, twitter: Twitter, threadPools: ThreadPools)
+  final case class Configuration(server: Server, github: GitHub, twitter: Twitter, threadPools: ThreadPools, cache: Cache)
 
   final case class Server(host: String, port: Int, basePath: String)
 
@@ -21,6 +21,8 @@ object configuration {
   final case class Twitter(host: Uri, token: String)
 
   final case class ThreadPools(server: Int, client: Int)
+
+  final case class Cache(timeoutSeconds: Long)
 
   /**
    * Reads a configuration file from the file system and tries to parse it.

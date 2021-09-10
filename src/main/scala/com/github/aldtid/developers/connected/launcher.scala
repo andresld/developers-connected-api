@@ -1,19 +1,25 @@
 package com.github.aldtid.developers.connected
 
+import cats.data.NonEmptyList
 import com.github.aldtid.developers.connected.configuration._
 import com.github.aldtid.developers.connected.encoder.BodyEncoder
 import com.github.aldtid.developers.connected.handler.DevelopersHandler
+import com.github.aldtid.developers.connected.handler.DevelopersHandler.Cache
 import com.github.aldtid.developers.connected.logging.{Log, ProgramLog}
 import com.github.aldtid.developers.connected.logging.implicits.all._
 import com.github.aldtid.developers.connected.logging.messages._
 import com.github.aldtid.developers.connected.logging.tags._
+import com.github.aldtid.developers.connected.model.responses.Error
 import com.github.aldtid.developers.connected.service.github.GitHubService
 import com.github.aldtid.developers.connected.service.github.connection.GitHubConnection
+import com.github.aldtid.developers.connected.service.github.response.Organization
 import com.github.aldtid.developers.connected.service.twitter.TwitterService
 import com.github.aldtid.developers.connected.service.twitter.connection.TwitterConnection
-import cats.effect.{ExitCode, Sync}
+import com.github.aldtid.developers.connected.service.twitter.response.Followers
+import cats.effect.{ExitCode, Ref, Sync}
 import cats.effect.kernel.Async
 import cats.implicits._
+import com.github.aldtid.developers.connected.util.TempCache
 import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.client.Client
@@ -23,6 +29,7 @@ import pureconfig.error.ConfigReaderFailures
 
 import java.util.concurrent.Executors
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService}
+import scala.concurrent.duration._
 
 
 object launcher {
@@ -96,24 +103,33 @@ object launcher {
         clientEC <- threadPool(configuration.threadPools.client)
         _        <- Logger[F].info(baseLog |+| serverThreadPool |+| configuration.threadPools.client.asThreadPool)
         serverEC <- threadPool(configuration.threadPools.server)
-        code     <- run(configuration.github, configuration.twitter, configuration.server, clientEC, serverEC)
+        code     <- run(configuration, clientEC, serverEC)
 
       } yield code
 
-    def run(github: GitHub, twitter: Twitter, server: Server, clientEC: ExecutionContext, serverEC: ExecutionContext): F[ExitCode] =
+    def run(config: Configuration, clientEC: ExecutionContext, serverEC: ExecutionContext): F[ExitCode] =
       Logger[F].info(baseLog |+| creatingClient) *>
         BlazeClientBuilder[F](clientEC).resource.use(implicit client => {
 
-          implicit val ghConnection: GitHubConnection = GitHubConnection(github.host, github.username, github.token)
-          implicit val twConnection: TwitterConnection = TwitterConnection(twitter.host, twitter.token)
+          implicit val ghConnection: GitHubConnection = GitHubConnection(config.github.host, config.github.username, config.github.token)
+          implicit val twConnection: TwitterConnection = TwitterConnection(config.twitter.host, config.twitter.token)
+
+          val timeout: FiniteDuration = config.cache.timeoutSeconds.seconds
+
+          def handler(orgsCache: Cache[F, String, List[Organization]], folCache: Cache[F, String, Followers]): DevelopersHandler[F] =
+            DevelopersHandler.default[F, L](GitHubService.default, TwitterService.default, orgsCache, folCache, timeout)
 
           for {
 
             _          <- Logger[F].info(baseLog |+| githubConnection |+| ghConnection)
             _          <- Logger[F].info(baseLog |+| twitterConnection |+| twConnection)
-            _          <- Logger[F].info(baseLog |+| startingServer |+| server)
-            devHandler  = DevelopersHandler.default[F, L](GitHubService.default, TwitterService.default)
-            code       <- start[F, L, O](serverEC, server, devHandler)
+            _          <- Logger[F].info(baseLog |+| startingServer |+| config.server)
+
+            orgsCache  <- TempCache.createCache[F, String, Either[NonEmptyList[Error], List[Organization]]]
+            folCache   <- TempCache.createCache[F, String, Either[NonEmptyList[Error], Followers]]
+            devHandler  = handler(TempCache.default(orgsCache), TempCache.default(folCache))
+
+            code       <- start[F, L, O](serverEC, config.server, devHandler)
 
           } yield code
 

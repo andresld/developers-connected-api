@@ -1,8 +1,8 @@
 package com.github.aldtid.developers.connected.handler
 
-import com.github.aldtid.developers.connected.logging.ProgramLog
+import com.github.aldtid.developers.connected.logging.{Log, ProgramLog}
 import com.github.aldtid.developers.connected.logging.implicits.all._
-import com.github.aldtid.developers.connected.logging.messages.{connectionErrors, connectionResult}
+import com.github.aldtid.developers.connected.logging.messages._
 import com.github.aldtid.developers.connected.logging.tags.developersHandlerTag
 import com.github.aldtid.developers.connected.model.Developers
 import com.github.aldtid.developers.connected.model.responses._
@@ -14,13 +14,17 @@ import com.github.aldtid.developers.connected.service.twitter.TwitterService
 import com.github.aldtid.developers.connected.service.twitter.connection.TwitterConnection
 import com.github.aldtid.developers.connected.service.twitter.{error => terror}
 import com.github.aldtid.developers.connected.service.twitter.response.{Followers, User}
+import com.github.aldtid.developers.connected.util.TempCache
 
+import cats.Monad
 import cats.data.{EitherT, NonEmptyList}
-import cats.effect.{Clock, Concurrent}
+import cats.effect.{Clock, Concurrent, Outcome}
 import cats.effect.implicits._
-import cats.effect.kernel.Outcome
+import cats.implicits._
 import org.http4s.client.Client
 import org.typelevel.log4cats.Logger
+
+import scala.concurrent.duration.FiniteDuration
 
 
 /**
@@ -49,6 +53,9 @@ object DevelopersHandler {
 
   // Type alias to simplify and make clearer some arguments types
   type OutEither[F[_], A] = Outcome[EitherT[F, NonEmptyList[Error], *], Throwable, A]
+
+  // Type alias to simplify the definition of the caches
+  type Cache[F[_], K, V] = TempCache[F, K, Either[NonEmptyList[Error], V]]
 
   /**
    * Creates an EitherT instance from passed [[Outcome]], returning a default [[InterruptedExecution]] in case the
@@ -100,6 +107,63 @@ object DevelopersHandler {
                                              second: EitherT[F, NonEmptyList[Error], A2],
                                              apply: (A1, A2) => B): EitherT[F, NonEmptyList[Error], B] =
     first.bothOutcome(second).flatMap(join).map(tuple => apply(tuple._1, tuple._2))
+
+  /**
+   * Uses an EitherT instance as an effect to be evaluated and whose resulting value will be saved in the cache.
+   *
+   * In case for current key there is a non-expired value, then that value is returned instead; otherwise, the effect is
+   * evaluated and its result is saved with a new expiration date.
+   *
+   * @param key cache key
+   * @param either EitherT effect to be evaluated and saved into the cache
+   * @param timeout cache value timeout
+   * @param cache cache to save the evaluated value
+   * @param getLog log to show when getting a value from the cache
+   * @param setLog log to show when evaluating a new value to save in the cache
+   * @tparam F context type
+   * @tparam K cache key type
+   * @tparam E either error type
+   * @tparam A either value type
+   * @tparam L logging type to format
+   * @return the saved or evaluated EitherT instance
+   */
+  def getOrSetE[F[_] : Monad : Logger, K, E, A, L](key: K,
+                                                   either: EitherT[F, E, A],
+                                                   timeout: FiniteDuration,
+                                                   cache: TempCache[F, K, Either[E, A]],
+                                                   getLog: Log[L],
+                                                   setLog: Log[L]): EitherT[F, E, A] =
+    EitherT(getOrSet(key, either.value, timeout, cache, getLog, setLog))
+
+  /**
+   * Uses an effect to be evaluated and whose resulting value will be saved in the cache.
+   *
+   * In case for current key there is a non-expired value, then that value is returned instead; otherwise, the effect is
+   * evaluated and its result is saved with a new expiration date.
+   *
+   * @param key cache key
+   * @param effect effect to be evaluated and saved into the cache
+   * @param timeout cache value timeout
+   * @param cache cache to save the evaluated value
+   * @param getLog log to show when getting a value from the cache
+   * @param setLog log to show when evaluating a new value to save in the cache
+   * @tparam F context type
+   * @tparam K cache key type
+   * @tparam V cache value type
+   * @tparam L logging type to format
+   * @return the saved or evaluated EitherT instance
+   */
+  def getOrSet[F[_] : Monad : Logger, K, V, L](key: K,
+                                               effect: F[V],
+                                               timeout: FiniteDuration,
+                                               cache: TempCache[F, K, V],
+                                               getLog: Log[L],
+                                               setLog: Log[L]): F[V] =
+    for {
+      _      <- Logger[F].info(getLog)
+      valueO <- cache.get(key)
+      result <- valueO.fold(Logger[F].info(setLog) *> effect.flatTap(cache.set(key, _, timeout)))(Monad[F].pure)
+    } yield result
 
   /**
    * Defines the followers retrieve for a Twitter username.
@@ -171,8 +235,13 @@ object DevelopersHandler {
    *
    * In case errors happen during this execution, they are aggregated in a non-empty list and returned.
    *
+   * Two caches are used to optimize the requests against the services, saving the requests results by username.
+   *
    * @param github github service
    * @param twitter twitter service
+   * @param orgsCache organizations cache
+   * @param folCache followers cache
+   * @param cacheTimeout maximum amount of time to renew a cache value
    * @param developers developers to check
    * @param pl logging instances
    * @param ghConnection github connection details
@@ -183,6 +252,9 @@ object DevelopersHandler {
    */
   def checkConnection[F[_] : Concurrent : Clock : Client : Logger, L](github: GitHubService[F],
                                                                       twitter: TwitterService[F],
+                                                                      orgsCache: Cache[F, String, List[Organization]],
+                                                                      folCache: Cache[F, String, Followers],
+                                                                      cacheTimeout: FiniteDuration,
                                                                       developers: Developers)
                                                                      (implicit pl: ProgramLog[L],
                                                                       ghConnection: GitHubConnection,
@@ -190,28 +262,46 @@ object DevelopersHandler {
 
     import pl._
 
-    val parallelOrganizations: EitherT[F, NonEmptyList[Error], List[Organization]] =
-      parallel[F, List[Organization], List[Organization], List[Organization]](
-        getOrganizations(developers.first, github).leftMap(NonEmptyList.one),
-        getOrganizations(developers.second, github).leftMap(NonEmptyList.one),
-        (orgs1, orgs2) => orgs1.filter(orgs2.contains)
+    def organizations(username: String): EitherT[F, NonEmptyList[Error], List[Organization]] =
+      getOrSetE(
+        username,
+        getOrganizations(username, github).leftMap(NonEmptyList.one),
+        cacheTimeout,
+        orgsCache,
+        retrieveOrgsCache |+| username.asUsername |+| developersHandlerTag,
+        evalOrgsCache |+| username.asUsername |+| developersHandlerTag
       )
 
-    val parallelUsers: EitherT[F, NonEmptyList[Error], List[User]] =
-      parallel[F, Followers, Followers, List[User]](
-        getFollowers(developers.first, twitter).leftMap(NonEmptyList.one),
-        getFollowers(developers.second, twitter).leftMap(NonEmptyList.one),
-        // In case the followers list does not exist, we can assume that the user has no followers
-        // (as does followers cannot be requested with current credentials)
-        (fol1, fol2) => fol1.data.zip(fol2.data).map(tuple => tuple._1.filter(tuple._2.contains)).getOrElse(Nil)
+    def commonOrganizations(orgs1: List[Organization], orgs2: List[Organization]): List[Organization] =
+      orgs1.filter(orgs2.contains)
+
+    def followers(username: String): EitherT[F, NonEmptyList[Error], Followers] =
+      getOrSetE(
+        username,
+        getFollowers(username, twitter).leftMap(NonEmptyList.one),
+        cacheTimeout,
+        folCache,
+        retrieveUsersCache |+| username.asUsername |+| developersHandlerTag,
+        evalUsersCache |+| username.asUsername |+| developersHandlerTag
       )
+
+    // In case the followers list does not exist, we can assume that the user has no followers (as does followers cannot
+    // be requested with current credentials)
+    def commonUsers(fol1: Followers, fol2: Followers): List[User] =
+      fol1.data.zip(fol2.data).map(tuple => tuple._1.filter(tuple._2.contains)).getOrElse(Nil)
+
+    val parallelOrganizations: EitherT[F, NonEmptyList[Error], List[Organization]] =
+      parallel(organizations(developers.first), organizations(developers.second), commonOrganizations)
+
+    val parallelUsers: EitherT[F, NonEmptyList[Error], List[User]] =
+      parallel(followers(developers.first), followers(developers.second), commonUsers)
 
     parallel[F, List[Organization], List[User], Connection](
       parallelOrganizations,
       parallelUsers,
-      (orgs, users) =>
-        if (orgs.isEmpty || users.isEmpty) NotConnected
-        else Connected(NonEmptyList.fromListUnsafe(orgs.map(_.login)))
+      (organizations, users) =>
+        if (organizations.isEmpty || users.isEmpty) NotConnected
+        else Connected(NonEmptyList.fromListUnsafe(organizations.map(_.login)))
     )
       .leftMap(Errors(_))
       .semiflatTap(connection => Logger[F].info(connectionResult |+| connection |+| developersHandlerTag))
@@ -224,6 +314,9 @@ object DevelopersHandler {
    *
    * @param github github service
    * @param twitter twitter service
+   * @param orgsCache organizations cache
+   * @param folCache followers cache
+   * @param cacheTimeout maximum amount of time to renew a cache value
    * @param ghConnection github connection details
    * @param twConnection twitter connection details
    * @tparam F context type
@@ -231,9 +324,13 @@ object DevelopersHandler {
    * @return the default handler implementation
    */
   def default[F[_] : Concurrent : Clock : Client : Logger, L : ProgramLog](github: GitHubService[F],
-                                                                           twitter: TwitterService[F])
+                                                                           twitter: TwitterService[F],
+                                                                           orgsCache: Cache[F, String, List[Organization]],
+                                                                           folCache: Cache[F, String, Followers],
+                                                                           cacheTimeout: FiniteDuration)
                                                                           (implicit ghConnection: GitHubConnection,
                                                                            twConnection: TwitterConnection): DevelopersHandler[F] =
-    (developers: Developers) => DevelopersHandler.checkConnection(github, twitter, developers)
+    (developers: Developers) =>
+      DevelopersHandler.checkConnection(github, twitter, orgsCache, folCache, cacheTimeout, developers)
 
 }
