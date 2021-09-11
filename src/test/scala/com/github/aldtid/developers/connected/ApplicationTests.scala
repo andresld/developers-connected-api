@@ -48,7 +48,7 @@ class ApplicationTests extends AnyFlatSpec with Matchers {
     val headers: Headers = Headers(`Content-Type`(MediaType.application.json), `Content-Length`(body.length))
     val response: Response[Id] = developers[Id, Json, Json](handler).apply(Request(uri = uri"/developers/connected/dev1/dev"))
 
-    response.status shouldBe Status.BadRequest
+    response.status shouldBe Status.Ok
     response.headers shouldBe headers
     response.body.compile.toList shouldBe body.getBytes
 
