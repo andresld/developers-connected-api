@@ -2,18 +2,50 @@
 :toc:
 :toclevels: 5
 
-== Running the tests
+== Design and implementation
+
+This API focuses on the concept of **connection**. Two users are connected if next both premises are true:
+
+- both developers have, at least, a GitHub organization in common
+- they follow each other on Twitter
+
+If premises evaluation results into a `true` value, then they are connected.
+
+Having in ming the base objective of the API, there are some base pillars on which the API is built:
+
+- `modularity`: aggregating functionality into modules allows to organize the code and make it more suitable to testing, clear and easy to read.
+- `composition`: data transformations are represented as a set of different pure functions, applied one after the other, adding clarity and comprehension to the code.
+- `transparency`: inner mutations are avoided as much as possible, giving the code a clear look of what is happening in each case by just looking at the definition of each function and the arguments that they take.
+- `extensibility`: it is assumed that current definitions for specific implementations may change in a future, so it is expected to provide a way to extend and abstract that functionality from specific implementations, giving a default behavior but also letting the door open for future decisions that may introduce changes with the lesser conflicts.
+
+Having also considered this, we can see some examples for these points at:
+
+- `context abstraction`: the whole project is abstracted into a generic context type `F[_]`, which allows a better handling for side-effects and enable the use of effects-as-values. The specific type for this generic context is defined in the `Main` object and nowhere else.
+- `logging`: the project is totally abstracted about the logging type, as it should only be considered a way to add or combine elements to be logged and a way to format that later formatting type. As it happens with context, this type is defined in the higher possible level.
+- `body encoding`: similar to logging, implementation for how to encode the later responses is not restricted to a single implementation, but it is generified in order to decouple the encoding to a specific implementation.
+- `routes`: API endpoints are defined as group of routes, each of them just focusing on its own endpoint. Defining multiple groups of routes result in an API by applying the combination of all of them, even with the default behavior for non-matched endpoints.
+- `services`: Twitter and GitHub implementations are function modules with a certain behavior. The code is abstracted of this behaviour until the start of the server, giving a simple way to test de code.
+
+=== Optimizations
+
+Some code optimizations have been implemented in the API definition:
+
+- `GitHub organizations`: it seems that it is not required to check the existence of a GitHub user to perform an organizations request for an user. This request will return a 404 response in case the user does not exist, so that allows to focus on this single request to get both information at the same time.
+- `Twitter followers vs following`: both requests for a Twitter user can solve the problem of checking the following link between two users. However, there is a huge difference between following and be followed so users with high social impact, becoming the second a problem when having to retrieve millions of users. Because of this, checking the following users is a more efficient way to perform this check.
+- `requests caching`: as there is an API request limit for the services, a temporal cache is added in order to reuse the information of the requests and reduce the number of them to be performed.
+
+== Interacting with the code
 
 NOTE: Base location is assumed to be the project directory.
+
+=== Running the tests
 
 To run API tests it is only required to execute the next command:
 
 [source,bash]
 sbt test
 
-== Running the API
-
-NOTE: Base location is assumed to be the project directory.
+=== Running the API
 
 To run the API it is required to follow next steps:
 
@@ -23,6 +55,7 @@ To run the API it is required to follow next steps:
 sbt docker:publishLocal
 
 . Move to `dc` directory:
++
 [source,bash]
 cd dc
 
@@ -35,14 +68,18 @@ TWITTER_TOKEN=<your-twitter-token>
 Please, remember to **REPLACE** the default values.
 
 . Get the environment up with:
++
 [source,bash]
 docker-compose up -d
++
+NOTE: In case Elasticsearch gives an error related to the value of `vm.map_max_count` being to low, you can increase it via: `sysctl -w vm.max_
+map_count=262144`.
 
 That's it! Your API should be running, and the logs should be getting injected into the Elasticsearch via Logstash to be searched via Kibana.
 
 NOTE: Kibana can be accessed at http://localhost:5601
 
-== Requesting the API
+=== Requesting the API
 
 It is possible to perform requests to the API using the `Postman` collection and environment present at `postman/` directory, it is only required to import them both.
 
@@ -67,20 +104,33 @@ $ curl http://localhost:8080/developers/connected/djspiewak/milessabin
 $ curl http://localhost:8080/developers/connected/rossabaker/milessabin
 {"organizations":["typelevel"],"connected":true}
 
-An example of non-connected developers that share an organization in common is the pair `djspiewak` and `mpilquist`:
+An example of non-connected developers that share an organization in common but do not follow each other is the pair `djspiewak` and `mpilquist`:
 
 [source,bash]
 $ curl http://localhost:8080/developers/connected/djspiewak/mpilquist
 {"connected":false}
 
-An example of non-connected developers that follow each other is the pair `djspiewak` and `odersky`:
+An example of non-connected developers without common organizations but that follow each other is the pair `djspiewak` and `odersky`:
 
 [source,bash]
 $ curl http://localhost:8080/developers/connected/djspiewak/odersky
 {"connected":false}
 
-And an example invalid developers is the pair `asdlfkhlas` and `qwoeripu`:
+And an example of invalid developers is the pair `asdlfkhlas` and `qwoeripu`:
 
 [source,bash]
 $ curl http://localhost:8080/developers/connected/asdlfkhlas/qwoeripu
 {"errors":["asdlfkhlas is not a valid user in github","qwoeripu is not a valid user in github","asdlfkhlas is not a valid user in twitter","qwoeripu is not a valid user in twitter"]}
+
+== Further improvements
+
+There are some improvement points to face on a more complex and complete development:
+
+- `launcher testing`: coverage should also contemplate the testing for this module functions, that represents the launching of the server itself.
+- `logging testing`: logs could be tested using a `WriterT` instance as a context, to append the logs to be lately checked.
+- `improved body encoding`: it should add some mechanism to use some or other encoding implementations base on `Accept` headers, as current implementation is limited to only one encoding.
+- `body decoding`: once implemented the body encoding a later body decoding for multiple types may be required via `Content-Type` header.
+- `following pagination`: although checking a Twitter user `following` users is more efficient in most cases than checking its `followers`, current retrieve is limited to a maximum of 1000 users. This API may not behave as expected for users that overpass this inner limit.
+- `project modularity`: most of the generic code could be added into different project modules to be used by other modules/projects if required, as well as the default implementations could also be extracted into modules. This way, the API would increase in dependencies but the code would be more clear in terms of what is strictly related to the API implementation and what is not.
+- `code clarity`: there may be some functions that could be represented in an alternative way that results in a better codification.
+- `requests correlating`: it would be easier to search and group the logs by specific identifiers.
