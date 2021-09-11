@@ -8,7 +8,7 @@ import com.github.aldtid.developers.connected.service.github.connection.GitHubCo
 import com.github.aldtid.developers.connected.service.github.response.Organization
 import com.github.aldtid.developers.connected.service.github.{error => gerror}
 import com.github.aldtid.developers.connected.service.twitter.connection.TwitterConnection
-import com.github.aldtid.developers.connected.service.twitter.response.{Followers, UserData}
+import com.github.aldtid.developers.connected.service.twitter.response.{Following, UserData}
 import com.github.aldtid.developers.connected.service.twitter.{error => terror}
 
 import io.circe.{Encoder, Json, Printer, Error => CError}
@@ -77,10 +77,10 @@ object json {
         )
       )
 
-  val jsonTwitterFollowersLoggable: Loggable[Followers, Json] =
+  val jsonTwitterFollowingLoggable: Loggable[Following, Json] =
     followers =>
       Json.obj(
-        "followers" -> Json.obj(
+        "following" -> Json.obj(
           "data" -> followers.data.asJson,
           "meta" -> followers.meta.asJson,
           // Convert the errors to strings and add them to the object as a list
@@ -191,7 +191,7 @@ object json {
     implicit val errorsLoggable: Loggable[Errors, Json] = jsonErrorsLoggable
 
     implicit val twitterUserDataLoggable: Loggable[UserData, Json] = jsonTwitterUserDataLoggable
-    implicit val twitterFollowersLoggable: Loggable[Followers, Json] = jsonTwitterFollowersLoggable
+    implicit val twitterFollowingLoggable: Loggable[Following, Json] = jsonTwitterFollowingLoggable
     implicit val twitterErrorLoggable: Loggable[terror.Error, Json] = jsonTwitterErrorLoggable
     implicit val twitterConnectionLoggable: Loggable[TwitterConnection, Json] = jsonTwitterConnectionLoggable
 

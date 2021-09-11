@@ -20,7 +20,7 @@ package object twitter {
 
     final case class Meta(resultCount: Long)
 
-    final case class Followers(data: Option[List[User]], meta: Option[Meta], errors: Option[List[Json]])
+    final case class Following(data: Option[List[User]], meta: Option[Meta], errors: Option[List[Json]])
 
   }
 

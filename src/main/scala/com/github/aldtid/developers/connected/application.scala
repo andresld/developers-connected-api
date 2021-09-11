@@ -88,8 +88,7 @@ object application {
 
       case GET -> Root / "developers" / "connected" / dev1 / dev2 =>
         controller.checkConnection(Developers(dev1, dev2))
-          .leftMap(errors => BadRequest(errors.encode))
-          .map(connection => Ok(connection.encode))
+          .bimap(errors => Ok(errors.encode), connection => Ok(connection.encode))
           .foldF(identity, identity)
 
     }

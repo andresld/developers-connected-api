@@ -134,11 +134,11 @@ class TwitterServiceTests extends AnyFlatSpec with Matchers {
 
   }
 
-  "getUserFollowers" should "correctly decode an Ok response as expected" in {
+  "getUserFollowing" should "correctly decode an Ok response as expected" in {
 
     val baseUri: Uri = Uri() / "root"
 
-    val expectedUri: Uri = Uri.unsafeFromString("/root/users/user/followers")
+    val expectedUri: Uri = Uri.unsafeFromString("/root/users/user/following?max_results=1000")
     val expectedHeaders: Headers = Headers(Raw(CIString("Authorization"), "Bearer token"))
 
     val body: String = """{"data":[{"id":"123","name":"user-name","username":"user-username"}],"meta":{"result_count":1}}"""
@@ -157,8 +157,8 @@ class TwitterServiceTests extends AnyFlatSpec with Matchers {
     implicit val connection: TwitterConnection = TwitterConnection(baseUri, "token")
     implicit val client: Client[IO] = Client[IO](behavior)
 
-    getUserFollowers[IO, Json]("user").unsafeRunSync() shouldBe
-      Right(Followers(Some(List(User("123","user-name", "user-username"))), Some(Meta(1)), None))
+    getUserFollowing[IO, Json]("user").unsafeRunSync() shouldBe
+      Right(Following(Some(List(User("123","user-name", "user-username"))), Some(Meta(1)), None))
 
   }
 
@@ -166,7 +166,7 @@ class TwitterServiceTests extends AnyFlatSpec with Matchers {
 
     val baseUri: Uri = Uri() / "root"
 
-    val expectedUri: Uri = Uri.unsafeFromString("/root/users/user/followers")
+    val expectedUri: Uri = Uri.unsafeFromString("/root/users/user/following?max_results=1000")
     val expectedHeaders: Headers = Headers(Raw(CIString("Authorization"), "Bearer token"))
 
     val body: String = """{"error":"some error"}"""
@@ -185,7 +185,7 @@ class TwitterServiceTests extends AnyFlatSpec with Matchers {
     implicit val connection: TwitterConnection = TwitterConnection(baseUri, "token")
     implicit val client: Client[IO] = Client[IO](behavior)
 
-    getUserFollowers[IO, Json]("user").unsafeRunSync() shouldBe Left(UnexpectedResponse(400, body, None))
+    getUserFollowing[IO, Json]("user").unsafeRunSync() shouldBe Left(UnexpectedResponse(400, body, None))
 
   }
 

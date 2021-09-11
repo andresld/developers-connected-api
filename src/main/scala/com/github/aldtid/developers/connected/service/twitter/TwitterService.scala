@@ -7,7 +7,7 @@ import com.github.aldtid.developers.connected.logging.tags.twitterTag
 import com.github.aldtid.developers.connected.service.util
 import com.github.aldtid.developers.connected.service.twitter.connection.TwitterConnection
 import com.github.aldtid.developers.connected.service.twitter.error._
-import com.github.aldtid.developers.connected.service.twitter.response.{Followers, UserData}
+import com.github.aldtid.developers.connected.service.twitter.response.{Following, UserData}
 
 import cats.data.EitherT
 import cats.effect.{Clock, Concurrent}
@@ -59,7 +59,7 @@ trait TwitterService[F[_]] {
                                         connection: TwitterConnection): EitherT[F, Error, UserData]
 
   /**
-   * Retrieves the followers for passed identifier.
+   * Retrieves the following users for passed identifier.
    *
    * In case an error happens during the retrieve, then it is returned as a Left. Only in case the
    * returned user option is not empty it is possible to assure the existence of the user.
@@ -73,14 +73,14 @@ trait TwitterService[F[_]] {
    * @param logger logger instance
    * @param connection connection information to perform the requests
    * @tparam L type to format the logs
-   * @return the user followers for related identifier or an error otherwise
+   * @return the user following users for related identifier or an error otherwise
    */
-  def getUserFollowers[L : ProgramLog](id: String)
+  def getUserFollowing[L : ProgramLog](id: String)
                                       (implicit F: Concurrent[F],
                                        C: Clock[F],
                                        client: Client[F],
                                        logger: Logger[F],
-                                       connection: TwitterConnection): EitherT[F, Error, Followers]
+                                       connection: TwitterConnection): EitherT[F, Error, Following]
 
 }
 
@@ -125,9 +125,9 @@ object TwitterService {
   }
 
   /**
-   * User followers retrieve by username default implementation.
+   * Default implementation of user following users to retrieve by username.
    *
-   * In case no followers are found for a user, a None will be returned for [[Followers.data]].
+   * In case no following users are found for a user, a None will be returned for [[Following.data]].
    *
    * @param id Twitter identifier to retrieve the followers for
    * @param client http client
@@ -136,24 +136,25 @@ object TwitterService {
    * @tparam L type to format the logs
    * @return the user followers or an error otherwise
    */
-  def getUserFollowers[F[_] : Concurrent : Clock : Logger, L](id: String)
+  def getUserFollowing[F[_] : Concurrent : Clock : Logger, L](id: String)
                                                              (implicit client: Client[F],
                                                               pl: ProgramLog[L],
-                                                              connection: TwitterConnection): F[Either[Error, Followers]] = {
+                                                              connection: TwitterConnection): F[Either[Error, Following]] = {
 
     import pl._
 
-    val uri: Uri = connection.baseUri / "users" / id / "followers"
+    // 'max_results' ensure to retrieve the maximum amount of users at once, which is now set to 1000
+    val uri: Uri = connection.baseUri / "users" / id / "following" withQueryParam("max_results", 1000)
     val request: Request[F] = Request(uri = uri, headers = Headers(authHeader))
     val baseLog: Log[L] = id.asIdentifier |+| twitterTag
 
-    val handle: Response[F] => F[Either[Error, Followers]] = {
-      case Status.Successful(response) => bodyAs[F, Followers](response).map(identity)
+    val handle: Response[F] => F[Either[Error, Following]] = {
+      case Status.Successful(response) => bodyAs[F, Following](response).map(identity)
       case response                    => util.bodyAs(response, (s, b) => Left(UnexpectedResponse(s, b, None)))
     }
 
-    util.requestWithLogs(request, baseLog |+| twitterFollowersRequest, baseLog |+| twitterFollowersResponse, handle)
-      .flatTap(util.logResult(baseLog |+| twitterFollowersSuccess, baseLog |+| twitterFollowersError))
+    util.requestWithLogs(request, baseLog |+| twitterFollowingRequest, baseLog |+| twitterFollowingResponse, handle)
+      .flatTap(util.logResult(baseLog |+| twitterFollowingSuccess, baseLog |+| twitterFollowingError))
 
   }
 
@@ -195,13 +196,13 @@ object TwitterService {
                                           connection: TwitterConnection): EitherT[F, Error, UserData] =
       EitherT(TwitterService.getUserByUsername(username))
 
-    def getUserFollowers[L : ProgramLog](id: String)
+    def getUserFollowing[L : ProgramLog](id: String)
                                         (implicit F: Concurrent[F],
                                          C: Clock[F],
                                          client: Client[F],
                                          logger: Logger[F],
-                                         connection: TwitterConnection): EitherT[F, Error, Followers] =
-      EitherT(TwitterService.getUserFollowers(id))
+                                         connection: TwitterConnection): EitherT[F, Error, Following] =
+      EitherT(TwitterService.getUserFollowing(id))
 
   }
 

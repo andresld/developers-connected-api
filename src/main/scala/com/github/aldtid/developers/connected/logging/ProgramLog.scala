@@ -52,7 +52,7 @@ trait ProgramLog[L] {
 
   // Supported Twitter model types
   implicit val twitterUserDataLoggable: Loggable[UserData, L]
-  implicit val twitterFollowersLoggable: Loggable[Followers, L]
+  implicit val twitterFollowingLoggable: Loggable[Following, L]
   implicit val twitterErrorLoggable: Loggable[TError, L]
   implicit val twitterConnectionLoggable: Loggable[TwitterConnection, L]
 
