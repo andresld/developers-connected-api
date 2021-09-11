@@ -50,3 +50,37 @@ Requests can also be performed via `curl`:
 
 [source,bash]
 curl http://localhost:8080/developers/connected/dev1/dev2
+
+== Examples
+
+An example of connected developers is the trio `djspiewak`, `rossabaker` and `milessabin`:
+
+[source,bash]
+$ curl http://localhost:8080/developers/connected/djspiewak/rossabaker
+{"organizations":["typelevel"],"connected":true}
+
+[source,bash]
+$ curl http://localhost:8080/developers/connected/djspiewak/milessabin
+{"organizations":["typelevel"],"connected":true}
+
+[source,bash]
+$ curl http://localhost:8080/developers/connected/rossabaker/milessabin
+{"organizations":["typelevel"],"connected":true}
+
+An example of non-connected developers that share an organization in common is the pair `djspiewak` and `mpilquist`:
+
+[source,bash]
+$ curl http://localhost:8080/developers/connected/djspiewak/mpilquist
+{"connected":false}
+
+An example of non-connected developers that follow each other is the pair `djspiewak` and `odersky`:
+
+[source,bash]
+$ curl http://localhost:8080/developers/connected/djspiewak/odersky
+{"connected":false}
+
+And an example invalid developers is the pair `asdlfkhlas` and `qwoeripu`:
+
+[source,bash]
+$ curl http://localhost:8080/developers/connected/asdlfkhlas/qwoeripu
+{"errors":["asdlfkhlas is not a valid user in github","qwoeripu is not a valid user in github","asdlfkhlas is not a valid user in twitter","qwoeripu is not a valid user in twitter"]}
