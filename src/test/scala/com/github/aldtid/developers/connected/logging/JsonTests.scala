@@ -5,7 +5,7 @@ import com.github.aldtid.developers.connected.logging.model._
 import com.github.aldtid.developers.connected.service.github.{error => gerror}
 import com.github.aldtid.developers.connected.service.github.response.Organization
 import com.github.aldtid.developers.connected.service.twitter.{error => terror}
-import com.github.aldtid.developers.connected.service.twitter.response.{Followers, Meta, User, UserData}
+import com.github.aldtid.developers.connected.service.twitter.response.{Following, Meta, User, UserData}
 import cats.Id
 import cats.data.NonEmptyList
 import com.github.aldtid.developers.connected.configuration.Server
@@ -118,9 +118,9 @@ class JsonTests extends AnyFlatSpec with Matchers {
         )
       )
 
-    jsonProgramLog.twitterFollowersLoggable.format(Followers(Some(List(User("123", "name", "username"))), Some(Meta(1)), None)) shouldBe
+    jsonProgramLog.twitterFollowingLoggable.format(Following(Some(List(User("123", "name", "username"))), Some(Meta(1)), None)) shouldBe
       Json.obj(
-        "followers" -> Json.obj(
+        "following" -> Json.obj(
           "data" -> Json.arr(
             Json.obj(
               "id" -> Json.fromString("123"),
@@ -135,9 +135,9 @@ class JsonTests extends AnyFlatSpec with Matchers {
         )
       )
 
-    jsonProgramLog.twitterFollowersLoggable.format(Followers(None, Some(Meta(1)), None)) shouldBe
+    jsonProgramLog.twitterFollowingLoggable.format(Following(None, Some(Meta(1)), None)) shouldBe
       Json.obj(
-        "followers" -> Json.obj(
+        "following" -> Json.obj(
           "data" -> Json.Null,
           "meta" -> Json.obj(
             "resultCount" -> Json.fromInt(1)

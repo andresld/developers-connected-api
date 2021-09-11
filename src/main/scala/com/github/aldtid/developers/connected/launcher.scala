@@ -3,7 +3,7 @@ package com.github.aldtid.developers.connected
 import com.github.aldtid.developers.connected.configuration._
 import com.github.aldtid.developers.connected.encoder.BodyEncoder
 import com.github.aldtid.developers.connected.handler.DevelopersHandler
-import com.github.aldtid.developers.connected.handler.DevelopersHandler.{Cache, UserFollowers}
+import com.github.aldtid.developers.connected.handler.DevelopersHandler.{Cache, UserFollowing}
 import com.github.aldtid.developers.connected.logging.{Log, ProgramLog}
 import com.github.aldtid.developers.connected.logging.implicits.all._
 import com.github.aldtid.developers.connected.logging.messages._
@@ -117,7 +117,7 @@ object launcher {
 
           val timeout: FiniteDuration = config.cache.timeoutSeconds.seconds
 
-          def handler(orgsCache: Cache[F, String, List[Organization]], folCache: Cache[F, String, UserFollowers]): DevelopersHandler[F] =
+          def handler(orgsCache: Cache[F, String, List[Organization]], folCache: Cache[F, String, UserFollowing]): DevelopersHandler[F] =
             DevelopersHandler.default[F, L](GitHubService.default, TwitterService.default, orgsCache, folCache, timeout)
 
           for {
@@ -127,7 +127,7 @@ object launcher {
             _          <- Logger[F].info(baseLog |+| startingServer |+| config.server)
 
             orgsCache  <- TempCache.createCache[F, String, Either[NonEmptyList[Error], List[Organization]]]
-            folCache   <- TempCache.createCache[F, String, Either[NonEmptyList[Error], UserFollowers]]
+            folCache   <- TempCache.createCache[F, String, Either[NonEmptyList[Error], UserFollowing]]
             devHandler  = handler(TempCache.default(orgsCache), TempCache.default(folCache))
 
             code       <- start[F, L, O](serverEC, config.server, devHandler)

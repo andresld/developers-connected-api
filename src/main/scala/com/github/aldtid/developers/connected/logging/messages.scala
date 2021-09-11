@@ -35,10 +35,10 @@ object messages {
   val twitterUserSuccess: Message = "user retrieved".asMessage
   val twitterUserError: Message = "user could not be retrieved".asMessage
 
-  val twitterFollowersRequest: Message = "requesting user followers".asMessage
-  val twitterFollowersResponse: Message = "response for requested followers".asMessage
-  val twitterFollowersSuccess: Message = "user followers retrieved".asMessage
-  val twitterFollowersError: Message = "user followers could not be retrieved".asMessage
+  val twitterFollowingRequest: Message = "requesting following users".asMessage
+  val twitterFollowingResponse: Message = "response for requested following users".asMessage
+  val twitterFollowingSuccess: Message = "following users retrieved".asMessage
+  val twitterFollowingError: Message = "following users could not be retrieved".asMessage
 
   // ----- GITHUB SERVICE -----
   val githubOrganizationsRequest: Message = "requesting user organizations".asMessage

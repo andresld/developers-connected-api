@@ -136,19 +136,19 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
         if (username == "dev") EitherT.rightT(UserData(Some(User("id", "name", username)), None))
         else EitherT.leftT(terror.BadRequest("body"))
 
-      def getUserFollowers[L: ProgramLog](id: String)
+      def getUserFollowing[L: ProgramLog](id: String)
                                          (implicit F: Concurrent[IO],
                                           C: Clock[IO],
                                           client: Client[IO],
                                           logger: Logger[IO],
-                                          connection: TwitterConnection): EitherT[IO, terror.Error, Followers] =
-        if (id == "id") EitherT.rightT(Followers(Some(List(User(id, "name", "username"))), None, None))
+                                          connection: TwitterConnection): EitherT[IO, terror.Error, Following] =
+        if (id == "id") EitherT.rightT(Following(Some(List(User(id, "name", "username"))), None, None))
         else EitherT.leftT(terror.BadRequest("body"))
 
     }
 
-    getFollowers("dev", service).value.unsafeRunSync() shouldBe
-      Right(UserFollowers(User("id", "name", "dev"), Followers(Some(List(User("id", "name", "username"))), None, None)))
+    getFollowing("dev", service).value.unsafeRunSync() shouldBe
+      Right(UserFollowing(User("id", "name", "dev"), Following(Some(List(User("id", "name", "username"))), None, None)))
 
   }
 
@@ -169,17 +169,17 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
         if (username == "dev") EitherT.leftT(terror.BadRequest("body"))
         else EitherT.rightT(UserData(Some(User("id", "name", username)), None))
 
-      def getUserFollowers[L: ProgramLog](id: String)
+      def getUserFollowing[L: ProgramLog](id: String)
                                          (implicit F: Concurrent[IO],
                                           C: Clock[IO],
                                           client: Client[IO],
                                           logger: Logger[IO],
-                                          connection: TwitterConnection): EitherT[IO, terror.Error, Followers] =
-        EitherT.rightT(Followers(Some(List(User(id, "name", "username"))), None, None))
+                                          connection: TwitterConnection): EitherT[IO, terror.Error, Following] =
+        EitherT.rightT(Following(Some(List(User(id, "name", "username"))), None, None))
 
     }
 
-    getFollowers("dev", service).value.unsafeRunSync() shouldBe Left(InvalidTwitterUser("dev"))
+    getFollowing("dev", service).value.unsafeRunSync() shouldBe Left(InvalidTwitterUser("dev"))
 
   }
 
@@ -200,17 +200,17 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
         if (username == "dev") EitherT.leftT(terror.Unauthorized("body"))
         else EitherT.rightT(UserData(Some(User("id", "name", username)), None))
 
-      def getUserFollowers[L: ProgramLog](id: String)
+      def getUserFollowing[L: ProgramLog](id: String)
                                          (implicit F: Concurrent[IO],
                                           C: Clock[IO],
                                           client: Client[IO],
                                           logger: Logger[IO],
-                                          connection: TwitterConnection): EitherT[IO, terror.Error, Followers] =
-        EitherT.rightT(Followers(Some(List(User(id, "name", "username"))), None, None))
+                                          connection: TwitterConnection): EitherT[IO, terror.Error, Following] =
+        EitherT.rightT(Following(Some(List(User(id, "name", "username"))), None, None))
 
     }
 
-    getFollowers("dev", service).value.unsafeRunSync() shouldBe
+    getFollowing("dev", service).value.unsafeRunSync() shouldBe
       Left(InternalTwitterError("dev", terror.Unauthorized("body")))
 
   }
@@ -232,17 +232,17 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
         if (username == "dev") EitherT.rightT(UserData(None, None))
         else EitherT.leftT(terror.Unauthorized("body"))
 
-      def getUserFollowers[L: ProgramLog](id: String)
+      def getUserFollowing[L: ProgramLog](id: String)
                                          (implicit F: Concurrent[IO],
                                           C: Clock[IO],
                                           client: Client[IO],
                                           logger: Logger[IO],
-                                          connection: TwitterConnection): EitherT[IO, terror.Error, Followers] =
-        EitherT.rightT(Followers(Some(List(User(id, "name", "username"))), None, None))
+                                          connection: TwitterConnection): EitherT[IO, terror.Error, Following] =
+        EitherT.rightT(Following(Some(List(User(id, "name", "username"))), None, None))
 
     }
 
-    getFollowers("dev", service).value.unsafeRunSync() shouldBe Left(InvalidTwitterUser("dev"))
+    getFollowing("dev", service).value.unsafeRunSync() shouldBe Left(InvalidTwitterUser("dev"))
 
   }
 
@@ -263,18 +263,18 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
         if (username == "dev") EitherT.rightT(UserData(Some(User("id", "name", username)), None))
         else EitherT.leftT(terror.BadRequest("body"))
 
-      def getUserFollowers[L: ProgramLog](id: String)
+      def getUserFollowing[L: ProgramLog](id: String)
                                          (implicit F: Concurrent[IO],
                                           C: Clock[IO],
                                           client: Client[IO],
                                           logger: Logger[IO],
-                                          connection: TwitterConnection): EitherT[IO, terror.Error, Followers] =
+                                          connection: TwitterConnection): EitherT[IO, terror.Error, Following] =
         if (id == "id") EitherT.leftT(terror.Unauthorized("body"))
-        else EitherT.rightT(Followers(Some(List(User(id, "name", "username"))), None, None))
+        else EitherT.rightT(Following(Some(List(User(id, "name", "username"))), None, None))
 
     }
 
-    getFollowers("dev", service).value.unsafeRunSync() shouldBe
+    getFollowing("dev", service).value.unsafeRunSync() shouldBe
       Left(InternalTwitterError("dev", terror.Unauthorized("body")))
 
   }
@@ -377,8 +377,8 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
 
     val user1: User = User("id1", "name1", "dev1")
     val user2: User = User("id2", "name2", "dev2")
-    val followers1: Followers = Followers(Some(List(user2)), None, None)
-    val followers2: Followers = Followers(Some(List(user1)), None, None)
+    val followers1: Following = Following(Some(List(user2)), None, None)
+    val followers2: Following = Following(Some(List(user1)), None, None)
 
     val twService: TwitterService[IO] = new TwitterService[IO] {
 
@@ -392,12 +392,12 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
         else if (username == "dev2") EitherT.rightT(UserData(Some(user2), None))
         else EitherT.leftT(terror.BadRequest("body"))
 
-      def getUserFollowers[L: ProgramLog](id: String)
+      def getUserFollowing[L: ProgramLog](id: String)
                                          (implicit F: Concurrent[IO],
                                           C: Clock[IO],
                                           client: Client[IO],
                                           logger: Logger[IO],
-                                          connection: TwitterConnection): EitherT[IO, terror.Error, Followers] =
+                                          connection: TwitterConnection): EitherT[IO, terror.Error, Following] =
         if (id == "id1") EitherT.rightT(followers1)
         else if (id == "id2") EitherT.rightT(followers2)
         else EitherT.leftT(terror.BadRequest("body"))
@@ -409,7 +409,7 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
 
         orgsCache <- createCache[IO, String, Either[NonEmptyList[Error], List[Organization]]]
         orgsTemp   = TempCache.default(orgsCache)
-        folCache  <- createCache[IO, String, Either[NonEmptyList[Error], UserFollowers]]
+        folCache  <- createCache[IO, String, Either[NonEmptyList[Error], UserFollowing]]
         folTemp    = TempCache.default(folCache)
 
         result    <- checkConnection(ghService, twService, orgsTemp, folTemp, 5.seconds, Developers("dev1", "dev2")).value
@@ -425,8 +425,8 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
           "dev2" -> CacheValue(Right(List(organization1, organization3)), 5.seconds)
         ),
         Map(
-          "dev1" -> CacheValue(Right(UserFollowers(user1, followers1)), 5.seconds),
-          "dev2" -> CacheValue(Right(UserFollowers(user2, followers2)), 5.seconds)
+          "dev1" -> CacheValue(Right(UserFollowing(user1, followers1)), 5.seconds),
+          "dev2" -> CacheValue(Right(UserFollowing(user2, followers2)), 5.seconds)
         )
       )
 
@@ -460,8 +460,8 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
 
     val user1: User = User("id1", "name1", "dev1")
     val user2: User = User("id2", "name2", "dev2")
-    val followers1: Followers = Followers(Some(List(user2)), None, None)
-    val followers2: Followers = Followers(Some(List(user1)), None, None)
+    val followers1: Following = Following(Some(List(user2)), None, None)
+    val followers2: Following = Following(Some(List(user1)), None, None)
 
     val twService: TwitterService[IO] = new TwitterService[IO] {
 
@@ -475,12 +475,12 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
         else if (username == "dev2") EitherT.rightT(UserData(Some(user2), None))
         else EitherT.leftT(terror.BadRequest("body"))
 
-      def getUserFollowers[L: ProgramLog](id: String)
+      def getUserFollowing[L: ProgramLog](id: String)
                                          (implicit F: Concurrent[IO],
                                           C: Clock[IO],
                                           client: Client[IO],
                                           logger: Logger[IO],
-                                          connection: TwitterConnection): EitherT[IO, terror.Error, Followers] =
+                                          connection: TwitterConnection): EitherT[IO, terror.Error, Following] =
         if (id == "id1") EitherT.rightT(followers1)
         else if (id == "id2") EitherT.rightT(followers2)
         else EitherT.leftT(terror.BadRequest("body"))
@@ -492,7 +492,7 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
 
         orgsCache <- createCache[IO, String, Either[NonEmptyList[Error], List[Organization]]]
         orgsTemp   = TempCache.default(orgsCache)
-        folCache  <- createCache[IO, String, Either[NonEmptyList[Error], UserFollowers]]
+        folCache  <- createCache[IO, String, Either[NonEmptyList[Error], UserFollowing]]
         folTemp    = TempCache.default(folCache)
 
         result    <- checkConnection(ghService, twService, orgsTemp, folTemp, 5.seconds, Developers("dev1", "dev2")).value
@@ -508,8 +508,8 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
         "dev2" -> CacheValue(Right(List(organization3)), 5.seconds)
       ),
       Map(
-        "dev1" -> CacheValue(Right(UserFollowers(user1, followers1)), 5.seconds),
-        "dev2" -> CacheValue(Right(UserFollowers(user2, followers2)), 5.seconds)
+        "dev1" -> CacheValue(Right(UserFollowing(user1, followers1)), 5.seconds),
+        "dev2" -> CacheValue(Right(UserFollowing(user2, followers2)), 5.seconds)
       )
     )
 
@@ -543,8 +543,8 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
 
     val user1: User = User("id1", "name1", "dev1")
     val user2: User = User("id2", "name2", "dev2")
-    val followers1: Followers = Followers(Some(List(user2)), None, None)
-    val followers2: Followers = Followers(None, None, None)
+    val followers1: Following = Following(Some(List(user2)), None, None)
+    val followers2: Following = Following(None, None, None)
 
     val twService: TwitterService[IO] = new TwitterService[IO] {
 
@@ -558,12 +558,12 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
         else if (username == "dev2") EitherT.rightT(UserData(Some(user2), None))
         else EitherT.leftT(terror.BadRequest("body"))
 
-      def getUserFollowers[L: ProgramLog](id: String)
+      def getUserFollowing[L: ProgramLog](id: String)
                                          (implicit F: Concurrent[IO],
                                           C: Clock[IO],
                                           client: Client[IO],
                                           logger: Logger[IO],
-                                          connection: TwitterConnection): EitherT[IO, terror.Error, Followers] =
+                                          connection: TwitterConnection): EitherT[IO, terror.Error, Following] =
         if (id == "id1") EitherT.rightT(followers1)
         else if (id == "id2") EitherT.rightT(followers2)
         else EitherT.leftT(terror.BadRequest("body"))
@@ -575,7 +575,7 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
 
         orgsCache <- createCache[IO, String, Either[NonEmptyList[Error], List[Organization]]]
         orgsTemp   = TempCache.default(orgsCache)
-        folCache  <- createCache[IO, String, Either[NonEmptyList[Error], UserFollowers]]
+        folCache  <- createCache[IO, String, Either[NonEmptyList[Error], UserFollowing]]
         folTemp    = TempCache.default(folCache)
 
         result    <- checkConnection(ghService, twService, orgsTemp, folTemp, 5.seconds, Developers("dev1", "dev2")).value
@@ -591,8 +591,8 @@ class DevelopersHandlerTests extends AnyFlatSpec with Matchers {
         "dev2" -> CacheValue(Right(List(organization1, organization3)), 5.seconds)
       ),
       Map(
-        "dev1" -> CacheValue(Right(UserFollowers(user1, followers1)), 5.seconds),
-        "dev2" -> CacheValue(Right(UserFollowers(user2, followers2)), 5.seconds)
+        "dev1" -> CacheValue(Right(UserFollowing(user1, followers1)), 5.seconds),
+        "dev2" -> CacheValue(Right(UserFollowing(user2, followers2)), 5.seconds)
       )
     )
 
