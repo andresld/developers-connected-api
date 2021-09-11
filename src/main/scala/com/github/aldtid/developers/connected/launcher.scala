@@ -1,10 +1,9 @@
 package com.github.aldtid.developers.connected
 
-import cats.data.NonEmptyList
 import com.github.aldtid.developers.connected.configuration._
 import com.github.aldtid.developers.connected.encoder.BodyEncoder
 import com.github.aldtid.developers.connected.handler.DevelopersHandler
-import com.github.aldtid.developers.connected.handler.DevelopersHandler.Cache
+import com.github.aldtid.developers.connected.handler.DevelopersHandler.{Cache, UserFollowers}
 import com.github.aldtid.developers.connected.logging.{Log, ProgramLog}
 import com.github.aldtid.developers.connected.logging.implicits.all._
 import com.github.aldtid.developers.connected.logging.messages._
@@ -15,11 +14,12 @@ import com.github.aldtid.developers.connected.service.github.connection.GitHubCo
 import com.github.aldtid.developers.connected.service.github.response.Organization
 import com.github.aldtid.developers.connected.service.twitter.TwitterService
 import com.github.aldtid.developers.connected.service.twitter.connection.TwitterConnection
-import com.github.aldtid.developers.connected.service.twitter.response.Followers
-import cats.effect.{ExitCode, Ref, Sync}
+import com.github.aldtid.developers.connected.util.TempCache
+
+import cats.data.NonEmptyList
+import cats.effect.{ExitCode, Sync}
 import cats.effect.kernel.Async
 import cats.implicits._
-import com.github.aldtid.developers.connected.util.TempCache
 import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.client.Client
@@ -28,6 +28,7 @@ import org.typelevel.log4cats.Logger
 import pureconfig.error.ConfigReaderFailures
 
 import java.util.concurrent.Executors
+
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService}
 import scala.concurrent.duration._
 
@@ -116,7 +117,7 @@ object launcher {
 
           val timeout: FiniteDuration = config.cache.timeoutSeconds.seconds
 
-          def handler(orgsCache: Cache[F, String, List[Organization]], folCache: Cache[F, String, Followers]): DevelopersHandler[F] =
+          def handler(orgsCache: Cache[F, String, List[Organization]], folCache: Cache[F, String, UserFollowers]): DevelopersHandler[F] =
             DevelopersHandler.default[F, L](GitHubService.default, TwitterService.default, orgsCache, folCache, timeout)
 
           for {
@@ -126,7 +127,7 @@ object launcher {
             _          <- Logger[F].info(baseLog |+| startingServer |+| config.server)
 
             orgsCache  <- TempCache.createCache[F, String, Either[NonEmptyList[Error], List[Organization]]]
-            folCache   <- TempCache.createCache[F, String, Either[NonEmptyList[Error], Followers]]
+            folCache   <- TempCache.createCache[F, String, Either[NonEmptyList[Error], UserFollowers]]
             devHandler  = handler(TempCache.default(orgsCache), TempCache.default(folCache))
 
             code       <- start[F, L, O](serverEC, config.server, devHandler)

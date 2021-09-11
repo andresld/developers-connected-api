@@ -42,6 +42,6 @@ object model {
 
   }
 
-  final case class Developers(first: String, second: String, others: String*)
+  final case class Developers(first: String, second: String)
 
 }

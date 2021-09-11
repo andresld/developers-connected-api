@@ -57,6 +57,8 @@ object DevelopersHandler {
   // Type alias to simplify the definition of the caches
   type Cache[F[_], K, V] = TempCache[F, K, Either[NonEmptyList[Error], V]]
 
+  final case class UserFollowers(user: User, followers: Followers)
+
   /**
    * Creates an EitherT instance from passed [[Outcome]], returning a default [[InterruptedExecution]] in case the
    * execution was cancelled for the outcome.
@@ -106,7 +108,7 @@ object DevelopersHandler {
   def parallel[F[_] : Concurrent, A1, A2, B](first: EitherT[F, NonEmptyList[Error], A1],
                                              second: EitherT[F, NonEmptyList[Error], A2],
                                              apply: (A1, A2) => B): EitherT[F, NonEmptyList[Error], B] =
-    first.bothOutcome(second).flatMap(join).map(tuple => apply(tuple._1, tuple._2))
+    first.bothOutcome(second).flatMap(join).map(apply.tupled)
 
   /**
    * Uses an EitherT instance as an effect to be evaluated and whose resulting value will be saved in the cache.
@@ -180,7 +182,7 @@ object DevelopersHandler {
    */
   def getFollowers[F[_] : Concurrent : Clock : Client : Logger,
                    L : ProgramLog](username: String, twitter: TwitterService[F])
-                                  (implicit twConnection: TwitterConnection): EitherT[F, Error, Followers] =
+                                  (implicit twConnection: TwitterConnection): EitherT[F, Error, UserFollowers] =
     twitter.getUserByUsername(username)
       .leftMap({
         case terror.BadRequest(_) => InvalidTwitterUser(username)
@@ -189,8 +191,8 @@ object DevelopersHandler {
       .flatMap(
         // In case the user data does not exist, we can assume that the user does not exist (as that
         // user cannot be requested with current credentials)
-        _.data.fold[EitherT[F, Error, Followers]](EitherT.leftT(InvalidTwitterUser(username)))(data =>
-          twitter.getUserFollowers(data.id).leftMap(InternalTwitterError(username, _))
+        _.data.fold[EitherT[F, Error, UserFollowers]](EitherT.leftT(InvalidTwitterUser(username)))(data =>
+          twitter.getUserFollowers(data.id).bimap(InternalTwitterError(username, _), UserFollowers(data, _))
         )
       )
 
@@ -253,7 +255,7 @@ object DevelopersHandler {
   def checkConnection[F[_] : Concurrent : Clock : Client : Logger, L](github: GitHubService[F],
                                                                       twitter: TwitterService[F],
                                                                       orgsCache: Cache[F, String, List[Organization]],
-                                                                      folCache: Cache[F, String, Followers],
+                                                                      folCache: Cache[F, String, UserFollowers],
                                                                       cacheTimeout: FiniteDuration,
                                                                       developers: Developers)
                                                                      (implicit pl: ProgramLog[L],
@@ -275,7 +277,7 @@ object DevelopersHandler {
     def commonOrganizations(orgs1: List[Organization], orgs2: List[Organization]): List[Organization] =
       orgs1.filter(orgs2.contains)
 
-    def followers(username: String): EitherT[F, NonEmptyList[Error], Followers] =
+    def followers(username: String): EitherT[F, NonEmptyList[Error], UserFollowers] =
       getOrSetE(
         username,
         getFollowers(username, twitter).leftMap(NonEmptyList.one),
@@ -287,20 +289,26 @@ object DevelopersHandler {
 
     // In case the followers list does not exist, we can assume that the user has no followers (as does followers cannot
     // be requested with current credentials)
-    def commonUsers(fol1: Followers, fol2: Followers): List[User] =
-      fol1.data.zip(fol2.data).map(tuple => tuple._1.filter(tuple._2.contains)).getOrElse(Nil)
+    def followEachOther(fol1: UserFollowers, fol2: UserFollowers): Boolean = (fol1, fol2) match {
+
+      case (UserFollowers(user1, Followers(Some(followers1), _, _)),
+            UserFollowers(user2, Followers(Some(followers2), _, _))) =>
+        followers1.contains(user2) && followers2.contains(user1)
+      case _ => false
+
+    }
 
     val parallelOrganizations: EitherT[F, NonEmptyList[Error], List[Organization]] =
       parallel(organizations(developers.first), organizations(developers.second), commonOrganizations)
 
-    val parallelUsers: EitherT[F, NonEmptyList[Error], List[User]] =
-      parallel(followers(developers.first), followers(developers.second), commonUsers)
+    val parallelUsers: EitherT[F, NonEmptyList[Error], Boolean] =
+      parallel(followers(developers.first), followers(developers.second), followEachOther)
 
-    parallel[F, List[Organization], List[User], Connection](
+    parallel[F, List[Organization], Boolean, Connection](
       parallelOrganizations,
       parallelUsers,
-      (organizations, users) =>
-        if (organizations.isEmpty || users.isEmpty) NotConnected
+      (organizations, followed) =>
+        if (organizations.isEmpty || !followed) NotConnected
         else Connected(NonEmptyList.fromListUnsafe(organizations.map(_.login)))
     )
       .leftMap(Errors(_))
@@ -326,7 +334,7 @@ object DevelopersHandler {
   def default[F[_] : Concurrent : Clock : Client : Logger, L : ProgramLog](github: GitHubService[F],
                                                                            twitter: TwitterService[F],
                                                                            orgsCache: Cache[F, String, List[Organization]],
-                                                                           folCache: Cache[F, String, Followers],
+                                                                           folCache: Cache[F, String, UserFollowers],
                                                                            cacheTimeout: FiniteDuration)
                                                                           (implicit ghConnection: GitHubConnection,
                                                                            twConnection: TwitterConnection): DevelopersHandler[F] =
